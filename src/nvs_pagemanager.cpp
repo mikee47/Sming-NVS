@@ -15,12 +15,8 @@
 
 namespace nvs
 {
-esp_err_t PageManager::load(Partition *partition, uint32_t baseSector, uint32_t sectorCount)
+esp_err_t PageManager::load(Partition& partition, uint32_t baseSector, uint32_t sectorCount)
 {
-    if (partition == nullptr) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
     mBaseSector = baseSector;
     mPageCount = sectorCount;
     mPageList.clear();

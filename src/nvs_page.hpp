@@ -24,7 +24,7 @@
 #include "compressed_enum_table.hpp"
 #include "intrusive_list.h"
 #include "nvs_item_hash_list.hpp"
-#include "partition.hpp"
+#include <Partition.h>
 
 namespace nvs
 {
@@ -85,7 +85,7 @@ public:
         return mState;
     }
 
-    esp_err_t load(Partition *partition, uint32_t sectorNumber);
+    esp_err_t load(Partition& partition, uint32_t sectorNumber);
 
     esp_err_t getSeqNumber(uint32_t& seqNumber) const;
 

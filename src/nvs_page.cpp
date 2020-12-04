@@ -32,12 +32,8 @@ uint32_t Page::Header::calculateCrc32()
                     offsetof(Header, mCrc32) - offsetof(Header, mSeqNumber));
 }
 
-esp_err_t Page::load(Partition *partition, uint32_t sectorNumber)
+esp_err_t Page::load(Partition& partition, uint32_t sectorNumber)
 {
-    if (partition == nullptr) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
     mPartition = partition;
     mBaseAddress = sectorNumber * SEC_SIZE;
     mUsedEntryCount = 0;
