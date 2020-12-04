@@ -32,7 +32,6 @@ NVSPartitionManager* NVSPartitionManager::get_instance()
     return instance;
 }
 
-#ifdef ESP_PLATFORM
 esp_err_t NVSPartitionManager::init_partition(const char *partition_label)
 {
     if (strlen(partition_label) > NVS_PART_NAME_MAX_SIZE) {
@@ -71,7 +70,6 @@ error:
     delete p;
     return result;
 }
-#endif // ESP_PLATFORM
 
 esp_err_t NVSPartitionManager::init_custom(Partition *partition, uint32_t baseSector, uint32_t sectorCount)
 {
@@ -108,7 +106,6 @@ esp_err_t NVSPartitionManager::init_custom(Partition *partition, uint32_t baseSe
 }
 
 #ifdef CONFIG_NVS_ENCRYPTION
-#ifdef ESP_PLATFORM
 esp_err_t NVSPartitionManager::secure_init_partition(const char *part_name, nvs_sec_cfg_t* cfg)
 {
     if (strlen(part_name) > NVS_PART_NAME_MAX_SIZE) {
@@ -146,7 +143,6 @@ esp_err_t NVSPartitionManager::secure_init_partition(const char *part_name, nvs_
 
     return ESP_OK;
 }
-#endif // ESP_PLATFORM
 #endif // CONFIG_NVS_ENCRYPTION
 
 esp_err_t NVSPartitionManager::deinit_partition(const char *partition_label)

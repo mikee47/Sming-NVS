@@ -16,6 +16,8 @@
 #include "nvs_encrypted_partition.hpp"
 #include "nvs_types.hpp"
 
+#define ESP_ENCRYPT_BLOCK_SIZE 16
+
 namespace nvs {
 
 NVSEncryptedPartition::NVSEncryptedPartition(const esp_partition_t *partition)

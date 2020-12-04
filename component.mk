@@ -1,9 +1,4 @@
-#
-# Component Makefile
-#
-
-COMPONENT_ADD_INCLUDEDIRS := include
-
+COMPONENT_INCDIRS := include
 COMPONENT_SRCDIRS := src
 
 ifndef CONFIG_NVS_ENCRYPTION
