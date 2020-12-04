@@ -13,9 +13,6 @@
 // limitations under the License.
 #include "nvs_partition_manager.hpp"
 #include "nvs_handle.hpp"
-#include "nvs_handle_simple.hpp"
-#include "nvs_handle_locked.hpp"
-#include "nvs_platform.hpp"
 
 namespace nvs {
 
@@ -31,31 +28,15 @@ std::unique_ptr<NVSHandle> open_nvs_handle_from_partition(const char *partition_
         return nullptr;
     }
 
-    Lock lock;
-
-    NVSHandleSimple *handle_simple;
+    NVSHandle *handle;
     esp_err_t result = nvs::NVSPartitionManager::get_instance()->
-            open_handle(partition_name, ns_name, open_mode, &handle_simple);
+            open_handle(partition_name, ns_name, open_mode, &handle);
 
     if (err) {
         *err = result;
     }
 
-    if (result != ESP_OK) {
-        return nullptr;
-    }
-
-    NVSHandleLocked *locked_handle = new (nothrow) NVSHandleLocked(handle_simple);
-
-    if (!locked_handle) {
-        if (err) {
-            *err = ESP_ERR_NO_MEM;
-        }
-        delete handle_simple;
-        return nullptr;
-    }
-
-    return std::unique_ptr<NVSHandleLocked>(locked_handle);
+    return handle;
 }
 
 std::unique_ptr<NVSHandle> open_nvs_handle(const char *ns_name,

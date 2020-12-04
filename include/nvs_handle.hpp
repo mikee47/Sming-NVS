@@ -6,6 +6,8 @@
 #include <type_traits>
 
 #include "nvs.h"
+#include "intrusive_list.h"
+#include "nvs_storage.hpp"
 
 namespace nvs {
 
@@ -32,12 +34,19 @@ enum class ItemType : uint8_t {
 /**
  * @brief A handle allowing nvs-entry related operations on the NVS.
  *
- * @note The scope of this handle may vary depending on the implementation, but normally would be the namespace of
- * a particular partition. Outside that scope, nvs entries can't be accessed/altered.
+ * @note The scope of this handle is the namespace of a particular partition. Outside that scope, nvs entries can't be accessed/altered.
  */
-class NVSHandle {
+class NVSHandle : public intrusive_list_node<NVSHandleSimple> {
+	friend class NVSPartitionManager;
 public:
-    virtual ~NVSHandle() { }
+    NVSHandle(bool readOnly, uint8_t nsIndex, Storage *StoragePtr) :
+        mStoragePtr(StoragePtr),
+        mNsIndex(nsIndex),
+        mReadOnly(readOnly),
+        valid(1)
+    { }
+
+    ~NVSHandle();
 
     /**
      * @brief      set value for given key
@@ -65,8 +74,7 @@ public:
      */
     template<typename T>
     esp_err_t set_item(const char *key, T value);
-    virtual
-    esp_err_t set_string(const char *key, const char* value) = 0;
+    esp_err_t set_string(const char *key, const char* value);
 
     /**
      * @brief      get value for given key
@@ -117,7 +125,7 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-    virtual esp_err_t set_blob(const char *key, const void* blob, size_t len) = 0;
+    esp_err_t set_blob(const char *key, const void* blob, size_t len);
 
     /**
      * @brief      get value for given key
@@ -147,32 +155,32 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-    virtual esp_err_t get_string(const char *key, char* out_str, size_t len) = 0;
-    virtual esp_err_t get_blob(const char *key, void* out_blob, size_t len) = 0;
+    esp_err_t get_string(const char *key, char* out_str, size_t len);
+    esp_err_t get_blob(const char *key, void* out_blob, size_t len);
 
     /**
      * @brief Looks up the size of an entry's data.
      *
      * For strings, this size includes the zero terminator.
      */
-    virtual esp_err_t get_item_size(ItemType datatype, const char *key, size_t &size) = 0;
+    esp_err_t get_item_size(ItemType datatype, const char *key, size_t &size);
 
     /**
      * @brief Erases an entry.
      */
-    virtual esp_err_t erase_item(const char* key) = 0;
+    esp_err_t erase_item(const char* key);
 
     /**
      * Erases all entries in the scope of this handle. The scope may vary, depending on the implementation.
      *
      * @not If you want to erase the whole nvs flash (partition), refer to \ref
      */
-    virtual esp_err_t erase_all() = 0;
+    esp_err_t erase_all();
 
     /**
      * Commits all changes done through this handle so far.
      */
-    virtual esp_err_t commit() = 0;
+    esp_err_t commit();
 
     /**
      * @brief      Calculate all entries in the scope of the handle.
@@ -189,12 +197,47 @@ public:
      *             - Other error codes from the underlying storage driver.
      *               Return param used_entries will be filled 0.
      */
-    virtual esp_err_t get_used_entry_count(size_t& usedEntries) = 0;
+    esp_err_t get_used_entry_count(size_t& usedEntries);
+
+    esp_err_t getItemDataSize(ItemType datatype, const char *key, size_t &dataSize);
+
+    void debugDump();
+
+    esp_err_t fillStats(nvs_stats_t &nvsStats);
+
+    esp_err_t calcEntriesInNamespace(size_t &usedEntries);
+
+    bool findEntry(nvs_opaque_iterator_t *it, const char *name);
+
+    bool nextEntry(nvs_opaque_iterator_t *it);
 
 protected:
-    virtual esp_err_t set_typed_item(ItemType datatype, const char *key, const void* data, size_t dataSize) = 0;
+    esp_err_t set_typed_item(ItemType datatype, const char *key, const void* data, size_t dataSize);
 
-    virtual esp_err_t get_typed_item(ItemType datatype, const char *key, void* data, size_t dataSize) = 0;
+    esp_err_t get_typed_item(ItemType datatype, const char *key, void* data, size_t dataSize);
+
+private:
+    /**
+     * The underlying storage's object.
+     */
+    Storage *mStoragePtr;
+
+    /**
+     * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).
+     */
+    uint8_t mNsIndex;
+
+    /**
+     * Whether this handle is marked as read-only or read-write.
+     * 0 indicates read-only, any other value read-write.
+     */
+    uint8_t mReadOnly;
+
+    /**
+     * Indicates the validity of this handle.
+     * Upon opening, a handle is valid. It becomes invalid if the underlying storage is de-initialized.
+     */
+    uint8_t valid;
 };
 
 /**
