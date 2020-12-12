@@ -20,11 +20,11 @@
 #include <type_traits>
 #include <cstring>
 #include <algorithm>
-#include "esp_spi_flash.h"
+#include <esp_spi_flash.h>
 #include "compressed_enum_table.hpp"
 #include "intrusive_list.h"
 #include "nvs_item_hash_list.hpp"
-#include <Partition.h>
+#include "nvs_partition.hpp"
 
 namespace nvs
 {
@@ -85,7 +85,7 @@ public:
         return mState;
     }
 
-    esp_err_t load(Partition& partition, uint32_t sectorNumber);
+    esp_err_t load(NVSPartition& partition, uint32_t sectorNumber);
 
     esp_err_t getSeqNumber(uint32_t& seqNumber) const;
 
@@ -226,7 +226,7 @@ protected:
 
     HashList mHashList;
 
-    Partition *mPartition;
+    NVSPartition *mPartition;
 
     static const uint32_t HEADER_OFFSET = 0;
     static const uint32_t ENTRY_TABLE_OFFSET = HEADER_OFFSET + 32;

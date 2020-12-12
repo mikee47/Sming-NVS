@@ -20,7 +20,6 @@
 #include "nvs_types.hpp"
 #include "nvs_page.hpp"
 #include "nvs_pagemanager.hpp"
-#include <Partition.h>
 
 //extern void dumpBytes(const uint8_t* data, size_t count);
 
@@ -61,7 +60,7 @@ class Storage : public intrusive_list_node<Storage>
 public:
     ~Storage();
 
-    Storage(Partition& partition) : mPartition(partition)
+    Storage(NVSPartition& partition) : mPartition(partition)
     {
     }
 
@@ -98,14 +97,9 @@ public:
 
     esp_err_t eraseNamespace(uint8_t nsIndex);
 
-    const Partition& getPart() const
+    const ::Storage::Partition& partition() const
     {
         return mPartition;
-    }
-
-    const char *getPartName() const
-    {
-        return mPartition.get_partition_name();
     }
 
     uint32_t getBaseSector()
@@ -151,7 +145,7 @@ protected:
     esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page* &page, Item& item, uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
 protected:
-    Partition& mPartition;
+    NVSPartition& mPartition;
     size_t mPageCount;
     PageManager mPageManager;
     TNamespaces mNamespaces;

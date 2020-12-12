@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "esp_partition.h"
 #include "nvs_partition_manager.hpp"
 #include "nvs_partition_lookup.hpp"
 
@@ -21,16 +20,7 @@
 
 namespace nvs {
 
-NVSPartitionManager* NVSPartitionManager::instance = nullptr;
-
-NVSPartitionManager* NVSPartitionManager::get_instance()
-{
-    if (!instance) {
-        instance = new (std::nothrow) NVSPartitionManager();
-    }
-
-    return instance;
-}
+NVSPartitionManager partitionManager;
 
 esp_err_t NVSPartitionManager::init_partition(const char *partition_label)
 {
@@ -49,15 +39,13 @@ esp_err_t NVSPartitionManager::init_partition(const char *partition_label)
     assert(SPI_FLASH_SEC_SIZE != 0);
 
     NVSPartition *p = nullptr;
-    esp_err_t result = partition_lookup::lookup_nvs_partition(partition_label, &p);
+    esp_err_t result = partition_lookup::lookup_nvs_partition(partition_label, p);
 
     if (result != ESP_OK) {
         goto error;
     }
 
-    size = p->get_size();
-
-    result = init_custom(p, 0, size / SPI_FLASH_SEC_SIZE);
+    result = init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE);
     if (result != ESP_OK) {
         goto error;
     }
@@ -71,12 +59,12 @@ error:
     return result;
 }
 
-esp_err_t NVSPartitionManager::init_custom(Partition *partition, uint32_t baseSector, uint32_t sectorCount)
+esp_err_t NVSPartitionManager::init_custom(NVSPartition* partition, uint32_t baseSector, uint32_t sectorCount)
 {
     Storage* new_storage = nullptr;
-    Storage* storage = lookup_storage_from_name(partition->get_partition_name());
+    Storage* storage = lookup_storage_from_name(partition->name());
     if (storage == nullptr) {
-        new_storage = new (std::nothrow) Storage(partition);
+        new_storage = new (std::nothrow) Storage(*partition);
 
         if (new_storage == nullptr) {
             return ESP_ERR_NO_MEM;
@@ -122,7 +110,7 @@ esp_err_t NVSPartitionManager::secure_init_partition(const char *part_name, nvs_
     NVSPartition *p;
     esp_err_t result;
     if (cfg != nullptr) {
-        result = partition_lookup::lookup_nvs_encrypted_partition(part_name, cfg, &p);
+        result = partition_lookup::lookup_nvs_encrypted_partition(part_name, cfg, p);
     } else {
         result = partition_lookup::lookup_nvs_partition(part_name, &p);
     }
@@ -131,7 +119,7 @@ esp_err_t NVSPartitionManager::secure_init_partition(const char *part_name, nvs_
         return result;
     }
 
-    uint32_t size = p->get_size();
+    uint32_t size = p->size();
 
     result = init_custom(p, 0, size / SPI_FLASH_SEC_SIZE);
     if (result != ESP_OK) {
@@ -165,7 +153,7 @@ esp_err_t NVSPartitionManager::deinit_partition(const char *partition_label)
     delete storage;
 
     for (auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
-        if (strcmp(it->get_partition_name(), partition_label) == 0) {
+        if (it->name() == partition_label) {
             NVSPartition *p = it;
             nvs_partition_list.erase(it);
             delete p;
@@ -179,32 +167,30 @@ esp_err_t NVSPartitionManager::deinit_partition(const char *partition_label)
 esp_err_t NVSPartitionManager::open_handle(const char *part_name,
         const char *ns_name,
         nvs_open_mode_t open_mode,
-        NVSHandle** handle)
+        NVSHandle*& handle)
 {
-    uint8_t nsIndex;
-    Storage* sHandle;
-
     if (nvs_storage_list.empty()) {
         return ESP_ERR_NVS_NOT_INITIALIZED;
     }
 
-    sHandle = lookup_storage_from_name(part_name);
+    Storage* sHandle = lookup_storage_from_name(part_name);
     if (sHandle == nullptr) {
         return ESP_ERR_NVS_PART_NOT_FOUND;
     }
 
+    uint8_t nsIndex;
     esp_err_t err = sHandle->createOrOpenNamespace(ns_name, open_mode == NVS_READWRITE, nsIndex);
     if (err != ESP_OK) {
         return err;
     }
 
-    *handle = new (std::nothrow) NVSHandle(open_mode==NVS_READONLY, nsIndex, sHandle);
+    handle = new (std::nothrow) NVSHandle(open_mode==NVS_READONLY, nsIndex, sHandle);
 
     if (handle == nullptr) {
         return ESP_ERR_NO_MEM;
     }
 
-    nvs_handles.push_back(*handle);
+    nvs_handles.push_back(handle);
 
     return ESP_OK;
 }
@@ -225,10 +211,10 @@ size_t NVSPartitionManager::open_handles_size()
     return nvs_handles.size();
 }
 
-Storage* NVSPartitionManager::lookup_storage_from_name(const char* name)
+Storage* NVSPartitionManager::lookup_storage_from_name(const String& name)
 {
     auto it = find_if(begin(nvs_storage_list), end(nvs_storage_list), [=](Storage& e) -> bool {
-        return (strcmp(e.getPartName(), name) == 0);
+        return e.partition().name() == name;
     });
 
     if (it == end(nvs_storage_list)) {

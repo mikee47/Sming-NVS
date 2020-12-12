@@ -20,11 +20,12 @@
 
 namespace nvs {
 
-NVSEncryptedPartition::NVSEncryptedPartition(const esp_partition_t *partition)
+NVSEncryptedPartition::NVSEncryptedPartition(::Storage::Partition& partition)
     : NVSPartition(partition) { }
 
 esp_err_t NVSEncryptedPartition::init(nvs_sec_cfg_t* cfg)
 {
+#ifdef ENABLE_MBEDTLS
     uint8_t* eky = reinterpret_cast<uint8_t*>(cfg);
 
     mbedtls_aes_xts_init(&mEctxt);
@@ -39,16 +40,20 @@ esp_err_t NVSEncryptedPartition::init(nvs_sec_cfg_t* cfg)
     }
 
     return ESP_OK;
+#else
+    return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
+#endif
 }
 
 esp_err_t NVSEncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 {
+#ifdef ENABLE_MBEDTLS
     /** Currently upper layer of NVS reads entries one by one even for variable size
     * multi-entry data types. So length should always be equal to size of an entry.*/
     if (size != sizeof(Item)) return ESP_ERR_INVALID_SIZE;
 
     // read data
-    esp_err_t read_result = esp_partition_read(mESPPartition, src_offset, dst, size);
+    esp_err_t read_result = Partition::read(src_offset, dst, size);
     if (read_result != ESP_OK) {
         return read_result;
     }
@@ -70,16 +75,20 @@ esp_err_t NVSEncryptedPartition::read(size_t src_offset, void* dst, size_t size)
     }
 
     return ESP_OK;
+#else
+    return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
+#endif
 }
 
 esp_err_t NVSEncryptedPartition::write(size_t addr, const void* src, size_t size)
 {
-    if (size % ESP_ENCRYPT_BLOCK_SIZE != 0) return ESP_ERR_INVALID_SIZE;
+#ifdef ENABLE_MBEDTLS
+    if (size % ESP_ENCRYPT_BLOCK_SIZE != 0) return false;
 
     // copy data to buffer for encryption
     uint8_t* buf = new (std::nothrow) uint8_t [size];
 
-    if (!buf) return ESP_ERR_NO_MEM;
+    if (!buf) return false;
 
     memcpy(buf, src, size);
 
@@ -91,33 +100,38 @@ esp_err_t NVSEncryptedPartition::write(size_t addr, const void* src, size_t size
 
     /* Use relative address instead of absolute address (relocatable), so that host-generated
      * encrypted nvs images can be used*/
-    uint32_t relAddr = addr;
+    uint32_t relAddr = offset;
 
     memset(data_unit, 0, sizeof(data_unit));
 
     for(uint8_t entry = 0; entry < (size/entrySize); entry++)
     {
-        uint32_t offset = entry * entrySize;
+        uint32_t off = entry * entrySize;
         uint32_t *addr_loc = (uint32_t*) &data_unit[0];
 
-        *addr_loc = relAddr + offset;
+        *addr_loc = relAddr + off;
         if (mbedtls_aes_crypt_xts(&mEctxt,
                                   MBEDTLS_AES_ENCRYPT,
                                   entrySize,
                                   data_unit,
-                                  buf + offset,
-                                  buf + offset) != 0)  {
+                                  buf + off,
+                                  buf + off) != 0)  {
             delete buf;
+            return false;
             return ESP_ERR_NVS_XTS_ENCR_FAILED;
         }
     }
 
     // write data
-    esp_err_t result = esp_partition_write(mESPPartition, addr, buf, size);
+    esp_err_t result = Partition::write(addr, buf, size);
 
     delete buf;
 
     return result;
+
+#else
+    return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
+#endif
 }
 
 } // nvs

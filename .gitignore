@@ -5,3 +5,4 @@ test_nvs_host/coverage.info
 **/*.gcda
 **/*.gcov
 **/*.o
+/.submodule

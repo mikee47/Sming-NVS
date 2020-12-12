@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "nvs_types.hpp"
 
-#if defined(ESP_PLATFORM)
+#ifdef ARCH_ESP32
 #include <esp32/rom/crc.h>
 #else
 #include "crc.h"

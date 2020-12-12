@@ -29,14 +29,13 @@ std::unique_ptr<NVSHandle> open_nvs_handle_from_partition(const char *partition_
     }
 
     NVSHandle *handle;
-    esp_err_t result = nvs::NVSPartitionManager::get_instance()->
-            open_handle(partition_name, ns_name, open_mode, &handle);
+    esp_err_t result = partitionManager.open_handle(partition_name, ns_name, open_mode, handle);
 
     if (err) {
         *err = result;
     }
 
-    return handle;
+    return std::unique_ptr<NVSHandle>(handle);
 }
 
 std::unique_ptr<NVSHandle> open_nvs_handle(const char *ns_name,

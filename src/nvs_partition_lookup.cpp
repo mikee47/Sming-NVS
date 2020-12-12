@@ -1,5 +1,6 @@
-#include "esp_partition.h"
 #include "nvs_partition_lookup.hpp"
+#include <Storage/PartitionTable.h>
+#include "nvs.h"
 
 #ifdef CONFIG_NVS_ENCRYPTION
 #include "nvs_encrypted_partition.hpp"
@@ -9,44 +10,52 @@ namespace nvs {
 
 namespace partition_lookup {
 
-esp_err_t lookup_nvs_partition(const char* label, NVSPartition **p)
+esp_err_t lookup_nvs_partition(const char* label, NVSPartition *&p)
 {
-    const esp_partition_t* esp_partition = esp_partition_find_first(
-            ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, label);
+	p = nullptr;
 
-    if (esp_partition == nullptr) {
-        return ESP_ERR_NOT_FOUND;
+    auto part = ::Storage::PartitionTable().find(label);
+    if(!part) {
+    	return ESP_ERR_NOT_FOUND;
     }
 
-    if (esp_partition->encrypted) {
+    if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
+    	return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    if (part.isEncrypted()) {
         return ESP_ERR_NVS_WRONG_ENCRYPTION;
     }
 
-    NVSPartition *partition = new (std::nothrow) NVSPartition(esp_partition);
+    NVSPartition *partition = new (std::nothrow) NVSPartition(part);
     if (partition == nullptr) {
         return ESP_ERR_NO_MEM;
     }
 
-    *p = partition;
+    p = partition;
 
     return ESP_OK;
 }
 
 #ifdef CONFIG_NVS_ENCRYPTION
-esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, NVSPartition **p)
+esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, NVSPartition *&p)
 {
-    const esp_partition_t* esp_partition = esp_partition_find_first(
-            ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_NVS, label);
+	p = nullptr;
 
-    if (esp_partition == nullptr) {
-        return ESP_ERR_NOT_FOUND;
+	auto part = ::Storage::PartitionTable().find(label);
+    if(!part) {
+    	return ESP_ERR_NOT_FOUND;
     }
 
-    if (esp_partition->encrypted) {
+    if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
+    	return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    if (part.isEncrypted()) {
         return ESP_ERR_NVS_WRONG_ENCRYPTION;
     }
 
-    NVSEncryptedPartition *enc_p = new (std::nothrow) NVSEncryptedPartition(esp_partition);
+    NVSEncryptedPartition *enc_p = new (std::nothrow) NVSEncryptedPartition(part);
     if (enc_p == nullptr) {
         return ESP_ERR_NO_MEM;
     }
@@ -57,7 +66,7 @@ esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, 
         return result;
     }
 
-    *p = enc_p;
+    p = enc_p;
 
     return ESP_OK;
 }

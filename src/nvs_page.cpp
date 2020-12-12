@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "nvs_page.hpp"
-#if defined(ESP_PLATFORM)
+#ifdef ARCH_ESP32
 #include <esp32/rom/crc.h>
 #else
 #include "crc.h"
@@ -32,9 +32,9 @@ uint32_t Page::Header::calculateCrc32()
                     offsetof(Header, mCrc32) - offsetof(Header, mSeqNumber));
 }
 
-esp_err_t Page::load(Partition& partition, uint32_t sectorNumber)
+esp_err_t Page::load(NVSPartition& partition, uint32_t sectorNumber)
 {
-    mPartition = partition;
+    mPartition = &partition;
     mBaseAddress = sectorNumber * SEC_SIZE;
     mUsedEntryCount = 0;
     mErasedEntryCount = 0;

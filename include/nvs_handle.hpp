@@ -7,9 +7,12 @@
 
 #include "nvs.h"
 #include "intrusive_list.h"
-#include "nvs_storage.hpp"
+
+class nvs_opaque_iterator_t;
 
 namespace nvs {
+
+class Storage;
 
 /**
  * The possible blob types. This is a helper definition for template functions.

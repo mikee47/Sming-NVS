@@ -13,7 +13,7 @@
 // limitations under the License.
 #include "nvs_storage.hpp"
 
-#ifndef ESP_PLATFORM
+#ifdef ARCH_HOST
 #include <map>
 #include <sstream>
 #endif
@@ -136,7 +136,7 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
     // Purge the blob index list
     blobIdxList.clearAndFreeNodes();
 
-#ifndef ESP_PLATFORM
+#ifdef ARCH_HOST
     debugCheck();
 #endif
     return ESP_OK;
@@ -320,9 +320,9 @@ esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key
             /* Erase the blob with earlier version*/
             err = eraseMultiPageBlob(nsIndex, key, prevStart);
 
-            if (err == ESP_ERR_FLASH_OP_FAIL) {
-                return ESP_ERR_NVS_REMOVE_FAILED;
-            }
+//            if (err == ESP_ERR_FLASH_OP_FAIL) {
+//                return ESP_ERR_NVS_REMOVE_FAILED;
+//            }
             if (err != ESP_OK) {
                 return err;
             }
@@ -376,14 +376,14 @@ esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key
             ESP_ERROR_CHECK(findItem(nsIndex, datatype, key, findPage, item));
         }
         err = findPage->eraseItem(nsIndex, datatype, key);
-        if (err == ESP_ERR_FLASH_OP_FAIL) {
-            return ESP_ERR_NVS_REMOVE_FAILED;
-        }
+//        if (err == ESP_ERR_FLASH_OP_FAIL) {
+//            return ESP_ERR_NVS_REMOVE_FAILED;
+//        }
         if (err != ESP_OK) {
             return err;
         }
     }
-#ifndef ESP_PLATFORM
+#ifdef ARCH_HOST
     debugCheck();
 #endif
     return ESP_OK;
@@ -666,7 +666,7 @@ void Storage::debugDump()
     }
 }
 
-#ifndef ESP_PLATFORM
+#ifdef ARCH_HOST
 void Storage::debugCheck()
 {
     std::map<std::string, Page*> keys;

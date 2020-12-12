@@ -15,7 +15,7 @@
 
 namespace nvs
 {
-esp_err_t PageManager::load(Partition& partition, uint32_t baseSector, uint32_t sectorCount)
+esp_err_t PageManager::load(NVSPartition& partition, uint32_t baseSector, uint32_t sectorCount)
 {
     mBaseSector = baseSector;
     mPageCount = sectorCount;

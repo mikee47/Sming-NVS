@@ -18,7 +18,7 @@
 namespace nvs {
 
 NVSHandle::~NVSHandle() {
-    NVSPartitionManager::get_instance()->close_handle(this);
+	partitionManager.close_handle(this);
 }
 
 esp_err_t NVSHandle::set_typed_item(ItemType datatype, const char *key, const void* data, size_t dataSize)

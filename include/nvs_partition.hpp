@@ -15,19 +15,51 @@
 #ifndef ESP_PARTITION_HPP_
 #define ESP_PARTITION_HPP_
 
-#include <Partition.h>
+#include <Storage/Partition.h>
 #include "intrusive_list.h"
 
-namespace nvs {
+#define ESP_ERR_FLASH_OP_FAIL    (ESP_ERR_FLASH_BASE + 1)
 
+namespace nvs
+{
 /**
  * Implementation of Partition for NVS.
  *
  * It is implemented as an intrusive_list_node to easily store instances of it. NVSStorage and NVSPage take pointer
  * references of this class to abstract their partition operations.
  */
-using NVSPartition = intrusive_list_node<Partition>;
+class NVSPartition : public ::Storage::Partition, public intrusive_list_node<NVSPartition>
+{
+public:
+	NVSPartition(const Partition& part) : Partition(part)
+	{
+	}
 
-} // nvs
+	virtual ~NVSPartition()
+	{
+	}
+
+	virtual esp_err_t read(size_t offset, void* dst, size_t size)
+	{
+		return read_raw(offset, dst, size);
+	}
+
+	esp_err_t read_raw(size_t offset, void* dst, size_t size)
+	{
+		return Partition::read(offset, dst, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
+	}
+
+	virtual esp_err_t write(size_t offset, const void* src, size_t size)
+	{
+		return write_raw(offset, src, size);
+	}
+
+	esp_err_t write_raw(size_t offset, const void* src, size_t size)
+	{
+		return Partition::write(offset, src, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
+	}
+};
+
+} // namespace nvs
 
 #endif // ESP_PARTITION_HPP_

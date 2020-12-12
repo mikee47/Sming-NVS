@@ -76,73 +76,10 @@ const char *esp_err_to_name(esp_err_t code);
   */
 const char *esp_err_to_name_r(esp_err_t code, char *buf, size_t buflen);
 
-/** @cond */
-void _esp_error_check_failed(esp_err_t rc, const char *file, int line, const char *function, const char *expression) __attribute__((noreturn));
-
-/** @cond */
-void _esp_error_check_failed_without_abort(esp_err_t rc, const char *file, int line, const char *function, const char *expression);
-
-#ifndef __ASSERT_FUNC
-/* This won't happen on IDF, which defines __ASSERT_FUNC in assert.h, but it does happen when building on the host which
-   uses /usr/include/assert.h or equivalent.
-*/
-#ifdef __ASSERT_FUNCTION
-#define __ASSERT_FUNC __ASSERT_FUNCTION /* used in glibc assert.h */
-#else
-#define __ASSERT_FUNC "??"
-#endif
-#endif
-/** @endcond */
-
-/**
- * Macro which can be used to check the error code,
- * and terminate the program in case the code is not ESP_OK.
- * Prints the error code, error location, and the failed statement to serial output.
- *
- * Disabled if assertions are disabled.
- */
-#ifdef NDEBUG
 #define ESP_ERROR_CHECK(x) do {                                         \
-        esp_err_t __err_rc = (x);                                       \
-        (void) sizeof(__err_rc);                                        \
+        esp_err_t error_value = (x);                                            \
+        assert(error_value == ESP_OK);                                          \
     } while(0)
-#elif defined(CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_SILENT)
-#define ESP_ERROR_CHECK(x) do {                                         \
-        esp_err_t __err_rc = (x);                                       \
-        if (__err_rc != ESP_OK) {                                       \
-            abort();                                                    \
-        }                                                               \
-    } while(0)
-#else
-#define ESP_ERROR_CHECK(x) do {                                         \
-        esp_err_t __err_rc = (x);                                       \
-        if (__err_rc != ESP_OK) {                                       \
-            _esp_error_check_failed(__err_rc, __FILE__, __LINE__,       \
-                                    __ASSERT_FUNC, #x);                 \
-        }                                                               \
-    } while(0)
-#endif
-
-/**
- * Macro which can be used to check the error code. Prints the error code, error location, and the failed statement to
- * serial output.
- * In comparison with ESP_ERROR_CHECK(), this prints the same error message but isn't terminating the program.
- */
-#ifdef NDEBUG
-#define ESP_ERROR_CHECK_WITHOUT_ABORT(x) ({                                         \
-        esp_err_t __err_rc = (x);                                                   \
-        __err_rc;                                                                   \
-    })
-#else
-#define ESP_ERROR_CHECK_WITHOUT_ABORT(x) ({                                         \
-        esp_err_t __err_rc = (x);                                                   \
-        if (__err_rc != ESP_OK) {                                                   \
-            _esp_error_check_failed_without_abort(__err_rc, __FILE__, __LINE__,     \
-                                    __ASSERT_FUNC, #x);                             \
-        }                                                                           \
-        __err_rc;                                                                   \
-    })
-#endif //NDEBUG
 
 #ifdef __cplusplus
 }

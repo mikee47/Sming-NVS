@@ -17,7 +17,6 @@
 #include "nvs_handle.hpp"
 #include "nvs_storage.hpp"
 #include "nvs_partition.hpp"
-#include "nvs_flash.h"
 
 namespace nvs {
 
@@ -25,11 +24,9 @@ class NVSPartitionManager {
 public:
     virtual ~NVSPartitionManager() { }
 
-    static NVSPartitionManager* get_instance();
-
     esp_err_t init_partition(const char *partition_label);
 
-    esp_err_t init_custom(Partition *partition, uint32_t baseSector, uint32_t sectorCount);
+    esp_err_t init_custom(NVSPartition* partition, uint32_t baseSector, uint32_t sectorCount);
 
 #ifdef CONFIG_NVS_ENCRYPTION
     esp_err_t secure_init_partition(const char *part_name, nvs_sec_cfg_t* cfg);
@@ -37,25 +34,21 @@ public:
 
     esp_err_t deinit_partition(const char *partition_label);
 
-    Storage* lookup_storage_from_name(const char* name);
+    Storage* lookup_storage_from_name(const String& name);
 
-    esp_err_t open_handle(const char *part_name, const char *ns_name, nvs_open_mode_t open_mode, NVSHandle** handle);
+    esp_err_t open_handle(const char *part_name, const char *ns_name, nvs_open_mode_t open_mode, NVSHandle*& handle);
 
     esp_err_t close_handle(NVSHandle* handle);
 
     size_t open_handles_size();
 
 protected:
-    NVSPartitionManager() { }
-
-    static NVSPartitionManager* instance;
-
     intrusive_list<NVSHandle> nvs_handles;
-
     intrusive_list<nvs::Storage> nvs_storage_list;
-
     intrusive_list<nvs::NVSPartition> nvs_partition_list;
 };
+
+extern NVSPartitionManager partitionManager;
 
 } // nvs
 
