@@ -79,7 +79,7 @@ TEST_CASE("Partition manager invalidates handle on partition de-init", "[partiti
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle("test", "ns_1", NVS_READWRITE, &handle) == ESP_OK);
     CHECK(handle->erase_all() == ESP_OK);
 

@@ -36,7 +36,7 @@ enum class ItemType : uint8_t {
  *
  * @note The scope of this handle is the namespace of a particular partition. Outside that scope, nvs entries can't be accessed/altered.
  */
-class NVSHandle : public intrusive_list_node<NVSHandleSimple> {
+class NVSHandle : public intrusive_list_node<NVSHandle> {
 	friend class NVSPartitionManager;
 public:
     NVSHandle(bool readOnly, uint8_t nsIndex, Storage *StoragePtr) :

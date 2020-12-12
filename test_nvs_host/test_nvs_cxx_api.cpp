@@ -25,7 +25,7 @@
 
 using namespace std;
 
-TEST_CASE("NVSHandleSimple CXX api open invalid arguments", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api open invalid arguments", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -47,7 +47,7 @@ TEST_CASE("NVSHandleSimple CXX api open invalid arguments", "[nvs cxx]")
     nvs::NVSPartitionManager::get_instance()->deinit_partition("test");
 }
 
-TEST_CASE("NVSHandleSimple CXX api open partition uninitialized", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api open partition uninitialized", "[nvs cxx]")
 {
     SpiFlashEmulator emu(10);
     esp_err_t result;
@@ -59,7 +59,7 @@ TEST_CASE("NVSHandleSimple CXX api open partition uninitialized", "[nvs cxx]")
     CHECK(!handle);
 }
 
-TEST_CASE("NVSHandleSimple CXX api open successful", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api open successful", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -85,7 +85,7 @@ TEST_CASE("NVSHandleSimple CXX api open successful", "[nvs cxx]")
     nvs::NVSPartitionManager::get_instance()->deinit_partition("test");
 }
 
-TEST_CASE("NVSHandleSimple CXX api open default part successful", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api open default part successful", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -111,7 +111,7 @@ TEST_CASE("NVSHandleSimple CXX api open default part successful", "[nvs cxx]")
     nvs::NVSPartitionManager::get_instance()->deinit_partition("nvs");
 }
 
-TEST_CASE("NVSHandleSimple CXX api open default part ns NULL", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api open default part ns NULL", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -133,7 +133,7 @@ TEST_CASE("NVSHandleSimple CXX api open default part ns NULL", "[nvs cxx]")
     nvs::NVSPartitionManager::get_instance()->deinit_partition("nvs");
 }
 
-TEST_CASE("NVSHandleSimple CXX api read/write string", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api read/write string", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -162,7 +162,7 @@ TEST_CASE("NVSHandleSimple CXX api read/write string", "[nvs cxx]")
     nvs::NVSPartitionManager::get_instance()->deinit_partition("nvs");
 }
 
-TEST_CASE("NVSHandleSimple CXX api read/write blob", "[nvs cxx]")
+TEST_CASE("NVSHandle CXX api read/write blob", "[nvs cxx]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;

@@ -27,7 +27,7 @@
 using namespace std;
 using namespace nvs;
 
-TEST_CASE("NVSHandleSimple closes its reference in PartitionManager", "[partition_mgr]")
+TEST_CASE("NVSHandle closes its reference in PartitionManager", "[partition_mgr]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -38,7 +38,7 @@ TEST_CASE("NVSHandleSimple closes its reference in PartitionManager", "[partitio
 
     CHECK(NVSPartitionManager::get_instance()->open_handles_size() == 0);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle("test", "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     CHECK(NVSPartitionManager::get_instance()->open_handles_size() == 1);
@@ -51,7 +51,7 @@ TEST_CASE("NVSHandleSimple closes its reference in PartitionManager", "[partitio
 
 }
 
-TEST_CASE("NVSHandleSimple multiple open and closes with PartitionManager", "[partition_mgr]")
+TEST_CASE("NVSHandle multiple open and closes with PartitionManager", "[partition_mgr]")
 {
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
@@ -62,8 +62,8 @@ TEST_CASE("NVSHandleSimple multiple open and closes with PartitionManager", "[pa
 
     CHECK(NVSPartitionManager::get_instance()->open_handles_size() == 0);
 
-    NVSHandleSimple *handle1;
-    NVSHandleSimple *handle2;
+    NVSHandle *handle1;
+    NVSHandle *handle2;
 
     REQUIRE(NVSPartitionManager::get_instance()->open_handle("test", "ns_1", NVS_READWRITE, &handle1) == ESP_OK);
 
@@ -85,13 +85,13 @@ TEST_CASE("NVSHandleSimple multiple open and closes with PartitionManager", "[pa
 
 }
 
-TEST_CASE("NVSHandleSimple readonly fails", "[partition_mgr]")
+TEST_CASE("NVSHandle readonly fails", "[partition_mgr]")
 {
     PartitionEmulationFixture f(0, 10);
 
     NVSPartitionManager::get_instance()->deinit_partition(NVS_DEFAULT_PART_NAME);
-    NVSHandleSimple *handle_1;
-    NVSHandleSimple *handle_2;
+    NVSHandle *handle_1;
+    NVSHandle *handle_2;
     const uint32_t NVS_FLASH_SECTOR = 6;
     const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
     f.emu.setBounds(NVS_FLASH_SECTOR, NVS_FLASH_SECTOR + NVS_FLASH_SECTOR_COUNT_MIN);
@@ -117,7 +117,7 @@ TEST_CASE("NVSHandleSimple readonly fails", "[partition_mgr]")
     CHECK(nvs_flash_deinit_partition(NVS_DEFAULT_PART_NAME) == ESP_OK);
 }
 
-TEST_CASE("NVSHandleSimple set/get char", "[partition_mgr]")
+TEST_CASE("NVSHandle set/get char", "[partition_mgr]")
 {
     enum class TestEnum : char {
         FOO = -1,
@@ -134,7 +134,7 @@ TEST_CASE("NVSHandleSimple set/get char", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle(NVS_DEFAULT_PART_NAME, "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     char test_e = 'a';
@@ -150,7 +150,7 @@ TEST_CASE("NVSHandleSimple set/get char", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(NVS_DEFAULT_PART_NAME) == ESP_OK);
 }
 
-TEST_CASE("NVSHandleSimple correctly sets/gets int enum", "[partition_mgr]")
+TEST_CASE("NVSHandle correctly sets/gets int enum", "[partition_mgr]")
 {
     enum class TestEnum : int {
         FOO,
@@ -166,7 +166,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets int enum", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle(NVS_DEFAULT_PART_NAME, "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     TestEnum test_e = TestEnum::BAR;
@@ -182,7 +182,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets int enum", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(NVS_DEFAULT_PART_NAME) == ESP_OK);
 }
 
-TEST_CASE("NVSHandleSimple correctly sets/gets int enum with negative values", "[partition_mgr]")
+TEST_CASE("NVSHandle correctly sets/gets int enum with negative values", "[partition_mgr]")
 {
     enum class TestEnum : int {
         FOO = -1,
@@ -199,7 +199,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets int enum with negative values", "
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle(NVS_DEFAULT_PART_NAME, "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     TestEnum test_e = TestEnum::FOO;
@@ -215,7 +215,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets int enum with negative values", "
     REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(NVS_DEFAULT_PART_NAME) == ESP_OK);
 }
 
-TEST_CASE("NVSHandleSimple correctly sets/gets uint8_t enum", "[partition_mgr]")
+TEST_CASE("NVSHandle correctly sets/gets uint8_t enum", "[partition_mgr]")
 {
     enum class TestEnum : uint8_t {
         FOO,
@@ -231,7 +231,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets uint8_t enum", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle(NVS_DEFAULT_PART_NAME, "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     TestEnum test_e = TestEnum::BAR;
@@ -247,7 +247,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets uint8_t enum", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(NVS_DEFAULT_PART_NAME) == ESP_OK);
 }
 
-TEST_CASE("NVSHandleSimple correctly sets/gets char enum", "[partition_mgr]")
+TEST_CASE("NVSHandle correctly sets/gets char enum", "[partition_mgr]")
 {
     enum class TestEnum : char {
         FOO = -1,
@@ -264,7 +264,7 @@ TEST_CASE("NVSHandleSimple correctly sets/gets char enum", "[partition_mgr]")
     REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN)
             == ESP_OK);
 
-    NVSHandleSimple *handle;
+    NVSHandle *handle;
     REQUIRE(NVSPartitionManager::get_instance()->open_handle(NVS_DEFAULT_PART_NAME, "ns_1", NVS_READWRITE, &handle) == ESP_OK);
 
     TestEnum test_e = TestEnum::BAR;

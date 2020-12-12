@@ -14,7 +14,7 @@
 #ifndef NVS_PARTITION_MANAGER_HPP_
 #define NVS_PARTITION_MANAGER_HPP_
 
-#include "nvs_handle_simple.hpp"
+#include "nvs_handle.hpp"
 #include "nvs_storage.hpp"
 #include "nvs_partition.hpp"
 #include "nvs_flash.h"
@@ -39,9 +39,9 @@ public:
 
     Storage* lookup_storage_from_name(const char* name);
 
-    esp_err_t open_handle(const char *part_name, const char *ns_name, nvs_open_mode_t open_mode, NVSHandleSimple** handle);
+    esp_err_t open_handle(const char *part_name, const char *ns_name, nvs_open_mode_t open_mode, NVSHandle** handle);
 
-    esp_err_t close_handle(NVSHandleSimple* handle);
+    esp_err_t close_handle(NVSHandle* handle);
 
     size_t open_handles_size();
 
@@ -50,7 +50,7 @@ protected:
 
     static NVSPartitionManager* instance;
 
-    intrusive_list<NVSHandleSimple> nvs_handles;
+    intrusive_list<NVSHandle> nvs_handles;
 
     intrusive_list<nvs::Storage> nvs_storage_list;
 

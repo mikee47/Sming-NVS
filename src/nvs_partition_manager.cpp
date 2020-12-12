@@ -179,7 +179,7 @@ esp_err_t NVSPartitionManager::deinit_partition(const char *partition_label)
 esp_err_t NVSPartitionManager::open_handle(const char *part_name,
         const char *ns_name,
         nvs_open_mode_t open_mode,
-        NVSHandleSimple** handle)
+        NVSHandle** handle)
 {
     uint8_t nsIndex;
     Storage* sHandle;
@@ -198,7 +198,7 @@ esp_err_t NVSPartitionManager::open_handle(const char *part_name,
         return err;
     }
 
-    *handle = new (std::nothrow) NVSHandleSimple(open_mode==NVS_READONLY, nsIndex, sHandle);
+    *handle = new (std::nothrow) NVSHandle(open_mode==NVS_READONLY, nsIndex, sHandle);
 
     if (handle == nullptr) {
         return ESP_ERR_NO_MEM;
@@ -209,9 +209,9 @@ esp_err_t NVSPartitionManager::open_handle(const char *part_name,
     return ESP_OK;
 }
 
-esp_err_t NVSPartitionManager::close_handle(NVSHandleSimple* handle) {
+esp_err_t NVSPartitionManager::close_handle(NVSHandle* handle) {
     for (auto it = nvs_handles.begin(); it != nvs_handles.end(); ++it) {
-        if (it == intrusive_list<NVSHandleSimple>::iterator(handle)) {
+        if (it == intrusive_list<NVSHandle>::iterator(handle)) {
             nvs_handles.erase(it);
             return ESP_OK;
         }
