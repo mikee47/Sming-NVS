@@ -26,6 +26,8 @@ namespace nvs
 class PartitionManager
 {
 public:
+	::Storage::Partition find_partition(const char* label);
+
 	PartitionPtr lookup_partition(const char* label);
 #ifdef ENABLE_NVS_ENCRYPTION
 	PartitionPtr lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
@@ -58,8 +60,6 @@ public:
 protected:
 	friend Handle;
 	friend Partition;
-
-	::Storage::Partition find_partition(const char* label);
 
 	// Called from Partition destructor
 	void remove_partition(Partition* partition);

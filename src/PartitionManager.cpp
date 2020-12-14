@@ -76,15 +76,12 @@ PartitionPtr PartitionManager::lookup_encrypted_partition(const char* label, con
 
 bool PartitionManager::init_partition(const char* partition_label)
 {
-	if(strlen(partition_label) > NVS_PART_NAME_MAX_SIZE) {
-		mLastError = ESP_ERR_INVALID_ARG;
-		return false;
-	}
-
 	auto storage = lookup_storage(partition_label);
 	if(storage != nullptr) {
-		mLastError = ESP_OK;
 		return true;
+	}
+	if(mLastError == ESP_ERR_INVALID_ARG) {
+		return false;
 	}
 
 	static_assert(SPI_FLASH_SEC_SIZE != 0, "Invalid SPI_FLASH_SEC_SIZE");
@@ -132,15 +129,12 @@ bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector,
 #ifdef ENABLE_NVS_ENCRYPTION
 bool PartitionManager::secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg)
 {
-	if(strlen(part_name) > NVS_PART_NAME_MAX_SIZE) {
-		mLastError = ESP_ERR_INVALID_ARG;
-		return false;
-	}
-
 	auto storage = lookup_storage(part_name);
 	if(storage != nullptr) {
-		mLastError = ESP_OK;
 		return true;
+	}
+	if(mLastError == ESP_ERR_INVALID_ARG) {
+		return false;
 	}
 
 	PartitionPtr p;
@@ -166,7 +160,6 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 {
 	Storage* storage = lookup_storage(partition_label);
 	if(!storage) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -210,6 +203,11 @@ void PartitionManager::remove_partition(Partition* partition)
 
 Storage* PartitionManager::lookup_storage(const String& part_name)
 {
+	if(part_name.length() > ::Storage::Partition::nameSize) {
+		mLastError = ESP_ERR_INVALID_ARG;
+		return nullptr;
+	}
+
 	if(storage_list.empty()) {
 		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return nullptr;

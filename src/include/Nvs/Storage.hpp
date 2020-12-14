@@ -25,14 +25,6 @@
 
 namespace nvs
 {
-/**
- * @brief Mode of opening the non-volatile storage
- */
-enum class OpenMode {
-	ReadOnly,
-	ReadWrite,
-};
-
 class Storage : public intrusive_list_node<Storage>
 {
 	enum class State {

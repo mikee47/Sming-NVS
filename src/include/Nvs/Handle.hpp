@@ -210,7 +210,6 @@ public:
 		return this == &other;
 	}
 
-protected:
 	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize);
 
 	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize);
