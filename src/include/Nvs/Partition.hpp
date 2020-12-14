@@ -58,4 +58,6 @@ public:
 	}
 };
 
+using PartitionPtr = std::unique_ptr<Partition>;
+
 } // namespace nvs

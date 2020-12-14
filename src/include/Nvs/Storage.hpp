@@ -41,22 +41,15 @@ class Storage : public intrusive_list_node<Storage>
 	};
 
 	struct NamespaceEntry : public intrusive_list_node<NamespaceEntry> {
-	public:
 		char mName[Item::MAX_KEY_LENGTH + 1];
 		uint8_t mIndex;
 	};
 
-	typedef intrusive_list<NamespaceEntry> TNamespaces;
-
 	struct UsedPageNode : public intrusive_list_node<UsedPageNode> {
-	public:
 		Page* mPage;
 	};
 
-	typedef intrusive_list<UsedPageNode> TUsedPageList;
-
 	struct BlobIndexNode : public intrusive_list_node<BlobIndexNode> {
-	public:
 		char key[Item::MAX_KEY_LENGTH + 1];
 		uint8_t nsIndex;
 		uint8_t chunkCount;
@@ -194,7 +187,7 @@ private:
 	intrusive_list<Handle> handle_list;
 	size_t mPageCount;
 	PageManager mPageManager;
-	TNamespaces mNamespaces;
+	intrusive_list<NamespaceEntry> mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
 	State mState{State::INVALID};
 	esp_err_t mLastError{ESP_OK};

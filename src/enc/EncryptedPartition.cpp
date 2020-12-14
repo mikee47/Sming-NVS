@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <cstring>
-#include "EncryptedPartition.hpp"
-#include "include/Nvs/Item.hpp"
+#include "../include/Nvs/EncryptedPartition.hpp"
+#include "../include/Nvs/Item.hpp"
 
 #define ESP_ENCRYPT_BLOCK_SIZE 16
 
@@ -22,7 +22,6 @@ namespace nvs
 {
 esp_err_t EncryptedPartition::init(const nvs_sec_cfg_t& cfg)
 {
-#ifdef ENABLE_MBEDTLS
 	mbedtls_aes_xts_init(&mEctxt);
 	mbedtls_aes_xts_init(&mDctxt);
 
@@ -35,18 +34,17 @@ esp_err_t EncryptedPartition::init(const nvs_sec_cfg_t& cfg)
 	}
 
 	return ESP_OK;
-#else
-	return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
-#endif
 }
 
 esp_err_t EncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 {
-#ifdef ENABLE_MBEDTLS
-	/** Currently upper layer of NVS reads entries one by one even for variable size
-    * multi-entry data types. So length should always be equal to size of an entry.*/
-	if(size != sizeof(Item))
+	/*
+	 * Currently upper layer of NVS reads entries one by one even for variable size
+	 * multi-entry data types. So length should always be equal to size of an entry.
+	 */
+	if(size != sizeof(Item)) {
 		return ESP_ERR_INVALID_SIZE;
+	}
 
 	// read data
 	esp_err_t read_result = Partition::read(src_offset, dst, size);
@@ -71,22 +69,19 @@ esp_err_t EncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 	}
 
 	return ESP_OK;
-#else
-	return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
-#endif
 }
 
 esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
 {
-#ifdef ENABLE_MBEDTLS
-	if(size % ESP_ENCRYPT_BLOCK_SIZE != 0)
-		return false;
+	if(size % ESP_ENCRYPT_BLOCK_SIZE != 0) {
+		return ESP_ERR_INVALID_SIZE;
+	}
 
 	// copy data to buffer for encryption
 	uint8_t* buf = new(std::nothrow) uint8_t[size];
-
-	if(!buf)
-		return false;
+	if(buf == nullptr) {
+		return ESP_ERR_NO_MEM;
+	}
 
 	memcpy(buf, src, size);
 
@@ -98,7 +93,7 @@ esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
 
 	/* Use relative address instead of absolute address (relocatable), so that host-generated
      * encrypted nvs images can be used*/
-	uint32_t relAddr = offset;
+	uint32_t relAddr = addr;
 
 	memset(data_unit, 0, sizeof(data_unit));
 
@@ -120,10 +115,6 @@ esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
 	delete buf;
 
 	return result;
-
-#else
-	return ESP_ERR_NVS_ENCR_NOT_SUPPORTED;
-#endif
 }
 
 } // namespace nvs

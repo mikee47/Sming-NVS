@@ -163,7 +163,7 @@ esp_err_t Storage::writeMultiPageBlob(uint8_t nsIndex, const char* key, const vo
 									  VerOffset chunkStart)
 {
 	uint8_t chunkCount = 0;
-	TUsedPageList usedPages;
+	intrusive_list<UsedPageNode> usedPages;
 	size_t remainingSize = dataSize;
 	size_t offset = 0;
 	esp_err_t err = ESP_OK;
@@ -217,7 +217,7 @@ esp_err_t Storage::writeMultiPageBlob(uint8_t nsIndex, const char* key, const vo
 		if(err != ESP_OK) {
 			break;
 		} else {
-			UsedPageNode* node = new(std::nothrow) UsedPageNode();
+			auto node = new(std::nothrow) UsedPageNode;
 			if(!node) {
 				err = ESP_ERR_NO_MEM;
 				break;

@@ -17,23 +17,26 @@
 #include "Handle.hpp"
 #include "Storage.hpp"
 #include "Partition.hpp"
+#ifdef ENABLE_NVS_ENCRYPTION
+#include "EncryptedPartition.hpp"
+#endif
 
 namespace nvs
 {
 class PartitionManager
 {
 public:
-	Partition* lookup_partition(const char* label);
-#ifdef CONFIG_NVS_ENCRYPTION
-	Partition* lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
+	PartitionPtr lookup_partition(const char* label);
+#ifdef ENABLE_NVS_ENCRYPTION
+	PartitionPtr lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
 #endif
 
 	bool init_partition(const char* partition_label);
 
-	bool init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount);
+	bool init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount);
 
-#ifdef CONFIG_NVS_ENCRYPTION
-	esp_err_t secure_init_partition(const char* part_name, const nvs_sec_cfg_t& cfg);
+#ifdef ENABLE_NVS_ENCRYPTION
+	bool secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg);
 #endif
 
 	bool deinit_partition(const char* partition_label);

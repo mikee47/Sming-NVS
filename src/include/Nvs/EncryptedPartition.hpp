@@ -14,11 +14,8 @@
 
 #pragma once
 
-#ifdef ENABLE_MBEDTLS
 #include <mbedtls/aes.h>
-#endif
-#include "include/Nvs/esp_err.h"
-#include "include/Nvs/Partition.hpp"
+#include "../include/Nvs/Partition.hpp"
 
 namespace nvs
 {
@@ -35,15 +32,15 @@ typedef struct {
 class EncryptedPartition : public Partition
 {
 public:
+	using Partition::Partition;
+
 	esp_err_t init(const nvs_sec_cfg_t& cfg);
 	esp_err_t read(size_t src_offset, void* dst, size_t size) override;
 	esp_err_t write(size_t dst_offset, const void* src, size_t size) override;
 
 protected:
-#ifdef ENABLE_MBEDTLS
 	mbedtls_aes_xts_context mEctxt;
 	mbedtls_aes_xts_context mDctxt;
-#endif
 };
 
 } // namespace nvs

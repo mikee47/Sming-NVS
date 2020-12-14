@@ -1,8 +1,6 @@
 NVS Partition Generator Utility
 ===============================
 
-:link_to_translation:`zh_CN:[中文]`
-
 Introduction
 ------------
 
@@ -75,13 +73,13 @@ If you intend to use an older format, the utility provides an option to disable 
 
 
 Encryption Support
--------------------
+------------------
 
 The NVS Partition Generator utility also allows you to create an encrypted binary file. The utility uses the AES-XTS encryption. Please refer to :ref:`nvs_encryption` for more details.
 
 
 Decryption Support
--------------------
+------------------
 This utility allows you to decrypt an encrypted NVS binary file. The utility uses an NVS binary file encrypted using AES-XTS encryption. Please refer to :ref:`nvs_encryption` for more details. 
 
 Running the utility

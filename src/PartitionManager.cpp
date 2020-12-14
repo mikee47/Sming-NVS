@@ -13,9 +13,6 @@
 // limitations under the License.
 
 #include "include/Nvs/PartitionManager.hpp"
-#ifdef CONFIG_NVS_ENCRYPTION
-#include "nvs_encrypted_partition.hpp"
-#endif
 #include <Storage/PartitionTable.h>
 
 namespace nvs
@@ -40,27 +37,27 @@ PartitionManager partitionManager;
 	return part;
 }
 
-Partition* PartitionManager::lookup_partition(const char* label)
+PartitionPtr PartitionManager::lookup_partition(const char* label)
 {
 	auto part = find_partition(label);
 	if(!part) {
 		return nullptr;
 	}
 
-	auto partition = new(std::nothrow) Partition(part);
+	PartitionPtr partition(new(std::nothrow) Partition(part));
 	mLastError = partition ? ESP_OK : ESP_ERR_NO_MEM;
 	return partition;
 }
 
-#ifdef CONFIG_NVS_ENCRYPTION
-Partition* PartitionManager::lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg)
+#ifdef ENABLE_NVS_ENCRYPTION
+PartitionPtr PartitionManager::lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg)
 {
 	auto part = find_partition(label);
 	if(!part) {
 		return nullptr;
 	}
 
-	auto enc_p = new(std::nothrow) NVSEncryptedPartition(part);
+	auto enc_p = new(std::nothrow) EncryptedPartition(part);
 
 	if(enc_p == nullptr) {
 		mLastError = ESP_ERR_NO_MEM;
@@ -72,10 +69,10 @@ Partition* PartitionManager::lookup_encrypted_partition(const char* label, const
 		}
 	}
 
-	return enc_p;
+	return PartitionPtr(enc_p);
 }
 
-#endif // CONFIG_NVS_ENCRYPTION
+#endif // ENABLE_NVS_ENCRYPTION
 
 bool PartitionManager::init_partition(const char* partition_label)
 {
@@ -101,12 +98,12 @@ bool PartitionManager::init_partition(const char* partition_label)
 		return false;
 	}
 
-	partition_list.push_back(p);
+	partition_list.push_back(p.release());
 
 	return true;
 }
 
-bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount)
+bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount)
 {
 	auto storage = lookup_storage(partition->name());
 	if(storage == nullptr) {
@@ -114,7 +111,6 @@ bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, ui
 
 		if(storage == nullptr) {
 			mLastError = ESP_ERR_NO_MEM;
-			delete partition;
 		} else {
 			mLastError = storage->init(baseSector, sectorCount);
 			if(mLastError == ESP_OK) {
@@ -125,7 +121,7 @@ bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, ui
 		}
 	} else {
 		// Storage was already initialized, don't need partition copy
-		delete partition;
+		partition.reset();
 
 		mLastError = storage->init(baseSector, sectorCount);
 	}
@@ -133,7 +129,7 @@ bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, ui
 	return mLastError == ESP_OK;
 }
 
-#ifdef CONFIG_NVS_ENCRYPTION
+#ifdef ENABLE_NVS_ENCRYPTION
 bool PartitionManager::secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg)
 {
 	if(strlen(part_name) > NVS_PART_NAME_MAX_SIZE) {
@@ -147,13 +143,13 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return true;
 	}
 
-	Partition* p;
+	PartitionPtr p;
 	if(cfg != nullptr) {
-		p = partition_lookup::lookup_encrypted_partition(part_name, *cfg);
+		p = lookup_encrypted_partition(part_name, *cfg);
 	} else {
-		p = partition_lookup::lookup_partition(part_name);
+		p = lookup_partition(part_name);
 	}
-	if(p == nullptr) {
+	if(!p) {
 		return false;
 	}
 
@@ -161,10 +157,10 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return false;
 	}
 
-	partition_list.push_back(p);
+	partition_list.push_back(p.release());
 	return true;
 }
-#endif // CONFIG_NVS_ENCRYPTION
+#endif // ENABLE_NVS_ENCRYPTION
 
 bool PartitionManager::deinit_partition(const char* partition_label)
 {
