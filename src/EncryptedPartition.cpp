@@ -20,19 +20,17 @@
 
 namespace nvs
 {
-esp_err_t EncryptedPartition::init(nvs_sec_cfg_t* cfg)
+esp_err_t EncryptedPartition::init(const nvs_sec_cfg_t& cfg)
 {
 #ifdef ENABLE_MBEDTLS
-	uint8_t* eky = reinterpret_cast<uint8_t*>(cfg);
-
 	mbedtls_aes_xts_init(&mEctxt);
 	mbedtls_aes_xts_init(&mDctxt);
 
-	if(mbedtls_aes_xts_setkey_enc(&mEctxt, eky, 2 * NVS_KEY_SIZE * 8) != 0) {
+	if(mbedtls_aes_xts_setkey_enc(&mEctxt, cfg.eky, sizeof(cfg)) != 0) {
 		return ESP_ERR_NVS_XTS_CFG_FAILED;
 	}
 
-	if(mbedtls_aes_xts_setkey_dec(&mDctxt, eky, 2 * NVS_KEY_SIZE * 8) != 0) {
+	if(mbedtls_aes_xts_setkey_dec(&mDctxt, cfg.eky, sizeof(cfg)) != 0) {
 		return ESP_ERR_NVS_XTS_CFG_FAILED;
 	}
 

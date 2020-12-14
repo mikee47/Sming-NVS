@@ -27,30 +27,46 @@ public:
 	{
 	}
 
-	esp_err_t init_partition(const char* partition_label);
-
-	esp_err_t init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount);
-
+	Partition* lookup_partition(const char* label);
 #ifdef CONFIG_NVS_ENCRYPTION
-	esp_err_t secure_init_partition(const char* part_name, nvs_sec_cfg_t* cfg);
+	Partition* lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
 #endif
 
-	esp_err_t deinit_partition(const char* partition_label);
+	bool init_partition(const char* partition_label);
+
+	bool init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount);
+
+#ifdef CONFIG_NVS_ENCRYPTION
+	esp_err_t secure_init_partition(const char* part_name, const nvs_sec_cfg_t& cfg);
+#endif
+
+	bool deinit_partition(const char* partition_label);
 
 	Storage* lookup_storage_from_name(const String& name);
 
-	esp_err_t open_handle(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode, Handle*& handle);
+	HandlePtr open(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode);
+
+	HandlePtr open(const char* ns_name, nvs_open_mode_t open_mode)
+	{
+		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
+	}
 
 	size_t open_handles_size();
+
+	esp_err_t lastError() const
+	{
+		return mLastError;
+	}
 
 protected:
 	friend Handle;
 
-	esp_err_t close_handle(Handle* handle);
+	void close_handle(Handle* handle);
 
 	intrusive_list<Handle> nvs_handles;
 	intrusive_list<nvs::Storage> nvs_storage_list;
 	intrusive_list<nvs::Partition> nvs_partition_list;
+	esp_err_t mLastError{ESP_OK};
 };
 
 extern PartitionManager partitionManager;

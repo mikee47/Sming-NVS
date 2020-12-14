@@ -57,7 +57,7 @@ class Handle : public intrusive_list_node<Handle>
 
 public:
 	Handle(bool readOnly, uint8_t nsIndex, Storage* StoragePtr)
-		: mStoragePtr(StoragePtr), mNsIndex(nsIndex), mReadOnly(readOnly), valid(1)
+		: mStoragePtr(StoragePtr), mNsIndex(nsIndex), mReadOnly(readOnly), valid(true)
 	{
 	}
 
@@ -242,16 +242,17 @@ private:
 
 	/**
      * Whether this handle is marked as read-only or read-write.
-     * 0 indicates read-only, any other value read-write.
      */
-	uint8_t mReadOnly;
+	bool mReadOnly;
 
 	/**
      * Indicates the validity of this handle.
      * Upon opening, a handle is valid. It becomes invalid if the underlying storage is de-initialized.
      */
-	uint8_t valid;
+	bool valid;
 };
+
+using HandlePtr = std::unique_ptr<Handle>;
 
 /**
  * @brief Opens non-volatile storage and returns a handle object.
@@ -273,14 +274,14 @@ private:
  *
  * @return shared pointer of an nvs handle on success, an empty shared pointer otherwise
  */
-std::unique_ptr<Handle> open_nvs_handle_from_partition(const char* partition_name, const char* ns_name,
-													   nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
+HandlePtr open_nvs_handle_from_partition(const char* partition_name, const char* ns_name, nvs_open_mode_t open_mode,
+										 esp_err_t* err = nullptr);
 
 /**
  * @brief This function does the same as \ref open_nvs_handle_from_partition but uses the default nvs partition
  * instead of a partition_name parameter.
  */
-std::unique_ptr<Handle> open_nvs_handle(const char* ns_name, nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
+HandlePtr open_nvs_handle(const char* ns_name, nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
 
 // Helper functions for template usage
 /**
