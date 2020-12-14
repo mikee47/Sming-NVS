@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef nvs_item_hash_list_h
-#define nvs_item_hash_list_h
+#pragma once
 
 #include "nvs.h"
-#include "nvs_types.hpp"
+#include "Item.hpp"
 #include "intrusive_list.h"
 
 namespace nvs
@@ -69,6 +68,3 @@ protected:
 }; // class HashList
 
 } // namespace nvs
-
-
-#endif /* nvs_item_hash_list_h */

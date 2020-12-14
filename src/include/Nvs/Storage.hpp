@@ -11,15 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef nvs_storage_hpp
-#define nvs_storage_hpp
+
+#pragma once
 
 #include <memory>
 #include <unordered_map>
-#include "nvs.hpp"
-#include "nvs_types.hpp"
-#include "nvs_page.hpp"
-#include "nvs_pagemanager.hpp"
+#include "Item.hpp"
+#include "Page.hpp"
+#include "PageManager.hpp"
 
 //extern void dumpBytes(const uint8_t* data, size_t count);
 
@@ -60,7 +59,7 @@ class Storage : public intrusive_list_node<Storage>
 public:
     ~Storage();
 
-    Storage(NVSPartition& partition) : mPartition(partition)
+    Storage(Partition& partition) : mPartition(partition)
     {
     }
 
@@ -145,7 +144,7 @@ protected:
     esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page* &page, Item& item, uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
 protected:
-    NVSPartition& mPartition;
+    Partition& mPartition;
     size_t mPageCount;
     PageManager mPageManager;
     TNamespaces mNamespaces;
@@ -164,5 +163,3 @@ struct nvs_opaque_iterator_t
     intrusive_list<nvs::Page>::iterator page;
     nvs_entry_info_t entry_info;
 };
-
-#endif /* nvs_storage_hpp */

@@ -11,20 +11,20 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef nvs_page_hpp
-#define nvs_page_hpp
+
+#pragma once
 
 #include "nvs.h"
-#include "nvs_types.hpp"
+#include "Item.hpp"
 #include <cstdint>
 #include <type_traits>
 #include <cstring>
 #include <algorithm>
 #include <esp_spi_flash.h>
-#include "compressed_enum_table.hpp"
+#include "CompressedEnumTable.hpp"
 #include "intrusive_list.h"
-#include "nvs_item_hash_list.hpp"
-#include "nvs_partition.hpp"
+#include "HashList.hpp"
+#include "Partition.hpp"
 
 namespace nvs
 {
@@ -85,7 +85,7 @@ public:
         return mState;
     }
 
-    esp_err_t load(NVSPartition& partition, uint32_t sectorNumber);
+    esp_err_t load(Partition& partition, uint32_t sectorNumber);
 
     esp_err_t getSeqNumber(uint32_t& seqNumber) const;
 
@@ -226,7 +226,7 @@ protected:
 
     HashList mHashList;
 
-    NVSPartition *mPartition;
+    Partition *mPartition;
 
     static const uint32_t HEADER_OFFSET = 0;
     static const uint32_t ENTRY_TABLE_OFFSET = HEADER_OFFSET + 32;
@@ -239,6 +239,3 @@ protected:
 }; // class Page
 
 } // namespace nvs
-
-
-#endif /* nvs_page_hpp */

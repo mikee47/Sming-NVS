@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef crc_h
-#define crc_h
+
+#pragma once
 
 #include <stdint.h>
 
@@ -25,6 +25,3 @@ uint32_t crc32_le(uint32_t crc, const uint8_t* buf, size_t len);
 #ifdef __cplusplus
 }
 #endif
-
-
-#endif /* crc_h */

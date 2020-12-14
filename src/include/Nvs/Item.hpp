@@ -11,16 +11,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef nvs_types_h
-#define nvs_types_h
+
+#pragma once
 
 #include <cstdint>
 #include <cstring>
 #include <cassert>
 #include <algorithm>
 #include "nvs.h"
-#include "nvs_handle.hpp"
-#include "compressed_enum_table.hpp"
+#include "Handle.hpp"
+#include "CompressedEnumTable.hpp"
 #include "string.h"
 
 using namespace std;
@@ -118,5 +118,3 @@ public:
 };
 
 } // namespace nvs
-
-#endif /* nvs_types_h */

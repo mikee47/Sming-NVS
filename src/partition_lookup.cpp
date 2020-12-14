@@ -1,16 +1,16 @@
-#include "nvs_partition_lookup.hpp"
+#include "partition_lookup.hpp"
 #include <Storage/PartitionTable.h>
-#include "nvs.h"
+#include "include/Nvs/nvs.h"
 
 #ifdef CONFIG_NVS_ENCRYPTION
-#include "nvs_encrypted_partition.hpp"
+#include "encrypted_partition.hpp"
 #endif // CONFIG_NVS_ENCRYPTION
 
 namespace nvs {
 
 namespace partition_lookup {
 
-esp_err_t lookup_nvs_partition(const char* label, NVSPartition *&p)
+esp_err_t lookup_nvs_partition(const char* label, Partition *&p)
 {
 	p = nullptr;
 
@@ -27,7 +27,7 @@ esp_err_t lookup_nvs_partition(const char* label, NVSPartition *&p)
         return ESP_ERR_NVS_WRONG_ENCRYPTION;
     }
 
-    NVSPartition *partition = new (std::nothrow) NVSPartition(part);
+    Partition *partition = new (std::nothrow) Partition(part);
     if (partition == nullptr) {
         return ESP_ERR_NO_MEM;
     }
@@ -38,7 +38,7 @@ esp_err_t lookup_nvs_partition(const char* label, NVSPartition *&p)
 }
 
 #ifdef CONFIG_NVS_ENCRYPTION
-esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, NVSPartition *&p)
+esp_err_t lookup_nvs_encrypted_partition(const char* label, nvs_sec_cfg_t* cfg, Partition *&p)
 {
 	p = nullptr;
 

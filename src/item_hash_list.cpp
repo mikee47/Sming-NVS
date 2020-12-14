@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "nvs_item_hash_list.hpp"
+#include "include/Nvs/HashList.hpp"
 
 namespace nvs
 {

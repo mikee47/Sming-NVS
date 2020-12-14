@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "nvs_page.hpp"
+
+#include "include/Nvs/Page.hpp"
 #ifdef ARCH_ESP32
 #include <esp32/rom/crc.h>
 #else
@@ -32,7 +33,7 @@ uint32_t Page::Header::calculateCrc32()
                     offsetof(Header, mCrc32) - offsetof(Header, mSeqNumber));
 }
 
-esp_err_t Page::load(NVSPartition& partition, uint32_t sectorNumber)
+esp_err_t Page::load(Partition& partition, uint32_t sectorNumber)
 {
     mPartition = &partition;
     mBaseAddress = sectorNumber * SEC_SIZE;
@@ -558,7 +559,7 @@ esp_err_t Page::mLoadEntryTable()
         // this is easy to check by reading EntryHeader (i.e. first word)
         while (mNextFreeEntry < ENTRY_COUNT) {
             uint32_t entryAddress = getEntryAddress(mNextFreeEntry);
-            uint32_t header;
+            uint32_t header{};
             auto rc = mPartition->read_raw(entryAddress, &header, sizeof(header));
             if (rc != ESP_OK) {
                 mState = PageState::INVALID;

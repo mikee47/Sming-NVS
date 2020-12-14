@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef intrusive_list_h
-#define intrusive_list_h
+
+#pragma once
 
 #include <cassert>
 #include <unordered_map>
@@ -253,6 +253,3 @@ protected:
     T* mLast = nullptr;
     size_t mSize = 0;
 };
-
-
-#endif /* intrusive_list_h */

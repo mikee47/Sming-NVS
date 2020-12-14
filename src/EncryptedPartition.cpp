@@ -13,17 +13,14 @@
 // limitations under the License.
 
 #include <cstring>
-#include "nvs_encrypted_partition.hpp"
-#include "nvs_types.hpp"
+#include "EncryptedPartition.hpp"
+#include "include/Nvs/Item.hpp"
 
 #define ESP_ENCRYPT_BLOCK_SIZE 16
 
 namespace nvs {
 
-NVSEncryptedPartition::NVSEncryptedPartition(::Storage::Partition& partition)
-    : NVSPartition(partition) { }
-
-esp_err_t NVSEncryptedPartition::init(nvs_sec_cfg_t* cfg)
+esp_err_t EncryptedPartition::init(nvs_sec_cfg_t* cfg)
 {
 #ifdef ENABLE_MBEDTLS
     uint8_t* eky = reinterpret_cast<uint8_t*>(cfg);
@@ -45,7 +42,7 @@ esp_err_t NVSEncryptedPartition::init(nvs_sec_cfg_t* cfg)
 #endif
 }
 
-esp_err_t NVSEncryptedPartition::read(size_t src_offset, void* dst, size_t size)
+esp_err_t EncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 {
 #ifdef ENABLE_MBEDTLS
     /** Currently upper layer of NVS reads entries one by one even for variable size
@@ -80,7 +77,7 @@ esp_err_t NVSEncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 #endif
 }
 
-esp_err_t NVSEncryptedPartition::write(size_t addr, const void* src, size_t size)
+esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
 {
 #ifdef ENABLE_MBEDTLS
     if (size % ESP_ENCRYPT_BLOCK_SIZE != 0) return false;

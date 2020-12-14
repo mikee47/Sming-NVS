@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "nvs_types.hpp"
+#include "include/Nvs/Item.hpp"
 
 #ifdef ARCH_ESP32
 #include <esp32/rom/crc.h>

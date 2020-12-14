@@ -11,13 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef nvs_pagemanager_hpp
-#define nvs_pagemanager_hpp
+
+#pragma once
 
 #include <memory>
 #include <list>
-#include "nvs_types.hpp"
-#include "nvs_page.hpp"
+#include "Item.hpp"
+#include "Page.hpp"
 #include "intrusive_list.h"
 
 namespace nvs
@@ -30,7 +30,7 @@ public:
 
     PageManager() {}
 
-    esp_err_t load(NVSPartition& partition, uint32_t baseSector, uint32_t sectorCount);
+    esp_err_t load(Partition& partition, uint32_t baseSector, uint32_t sectorCount);
 
     TPageListIterator begin()
     {
@@ -75,6 +75,3 @@ protected:
 
 
 } // namespace nvs
-
-
-#endif /* nvs_pagemanager_hpp */

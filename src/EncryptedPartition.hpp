@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NVS_ENCRYPTED_PARTITION_HPP_
-#define NVS_ENCRYPTED_PARTITION_HPP_
+#pragma once
 
 #ifdef ENABLE_MBEDTLS
-#include "mbedtls/aes.h"
+#include <mbedtls/aes.h>
 #endif
-#include "esp_err.h"
-#include "nvs_partition.hpp"
+#include "include/Nvs/esp_err.h"
+#include "include/Nvs/Partition.hpp"
 
 namespace nvs {
 
@@ -33,16 +32,10 @@ typedef struct {
     uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
 } nvs_sec_cfg_t;
 
-class NVSEncryptedPartition : public NVSPartition {
+class EncryptedPartition : public Partition {
 public:
-    NVSEncryptedPartition(::Storage::Partition& partition);
-
-    virtual ~NVSEncryptedPartition() { }
-
     esp_err_t init(nvs_sec_cfg_t* cfg);
-
     esp_err_t read(size_t src_offset, void* dst, size_t size) override;
-
     esp_err_t write(size_t dst_offset, const void* src, size_t size) override;
 
 protected:
@@ -53,5 +46,3 @@ protected:
 };
 
 } // nvs
-
-#endif // NVS_ENCRYPTED_PARTITION_HPP_

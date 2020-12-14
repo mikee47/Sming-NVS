@@ -1,8 +1,6 @@
 Non-volatile storage library
 ============================
 
-:link_to_translation:`zh_CN:[中文]`
-
 Introduction
 ------------
 
@@ -18,7 +16,7 @@ Future versions of this library may have other storage backends to keep data in 
 
 .. note:: if an NVS partition is truncated (for example, when the partition table layout is changed), its contents should be erased. ESP-IDF build system provides a ``idf.py erase_flash`` target to erase all contents of the flash chip.
 
-.. note:: NVS works best for storing many small values, rather than a few large values of the type 'string' and 'blob'. If you need to store large blobs or strings, consider using the facilities provided by the FAT filesystem on top of the wear levelling library.
+.. note:: NVS works best for storing many small values, rather than a few large values of the type 'string' and 'blob'. If you need to store large blobs or strings, consider using a regular file system.
 
 
 Keys and values
@@ -47,7 +45,7 @@ Data type check is also performed when reading a value. An error is returned if 
 Namespaces
 ^^^^^^^^^^
 
-To mitigate potential conflicts in key names between different components, NVS assigns each key-value pair to one of namespaces. Namespace names follow the same rules as key names, i.e., the maximum length is 15 characters. Namespace name is specified in the ``nvs_open`` or ``nvs_open_from_part`` call. This call returns an opaque handle, which is used in subsequent calls to the ``nvs_get_*``, ``nvs_set_*``, and ``nvs_commit`` functions. This way, a handle is associated with a namespace, and key names will not collide with same names in other namespaces.
+To mitigate potential conflicts in key names between different components, NVS assigns each key-value pair to one namespace. Namespace names follow the same rules as key names, i.e., the maximum length is 15 characters. Namespace name is specified in the ``nvs_open`` or ``nvs_open_from_part`` call. This call returns an opaque handle, which is used in subsequent calls to the ``nvs_get_*``, ``nvs_set_*``, and ``nvs_commit`` functions. This way, a handle is associated with a namespace, and key names will not collide with same names in other namespaces.
 Please note that the namespaces with the same name in different NVS partitions are considered as separate namespaces.
 
 

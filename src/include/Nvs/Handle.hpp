@@ -1,5 +1,18 @@
-#ifndef NVS_HANDLE_HPP_
-#define NVS_HANDLE_HPP_
+// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
 
 #include <string>
 #include <memory>
@@ -39,17 +52,17 @@ enum class ItemType : uint8_t {
  *
  * @note The scope of this handle is the namespace of a particular partition. Outside that scope, nvs entries can't be accessed/altered.
  */
-class NVSHandle : public intrusive_list_node<NVSHandle> {
-	friend class NVSPartitionManager;
+class Handle : public intrusive_list_node<Handle> {
+	friend class PartitionManager;
 public:
-    NVSHandle(bool readOnly, uint8_t nsIndex, Storage *StoragePtr) :
+    Handle(bool readOnly, uint8_t nsIndex, Storage *StoragePtr) :
         mStoragePtr(StoragePtr),
         mNsIndex(nsIndex),
         mReadOnly(readOnly),
         valid(1)
     { }
 
-    ~NVSHandle();
+    ~Handle();
 
     /**
      * @brief      set value for given key
@@ -263,7 +276,7 @@ private:
  *
  * @return shared pointer of an nvs handle on success, an empty shared pointer otherwise
  */
-std::unique_ptr<NVSHandle> open_nvs_handle_from_partition(const char *partition_name,
+std::unique_ptr<Handle> open_nvs_handle_from_partition(const char *partition_name,
         const char *ns_name,
         nvs_open_mode_t open_mode,
         esp_err_t *err = nullptr);
@@ -272,7 +285,7 @@ std::unique_ptr<NVSHandle> open_nvs_handle_from_partition(const char *partition_
  * @brief This function does the same as \ref open_nvs_handle_from_partition but uses the default nvs partition
  * instead of a partition_name parameter.
  */
-std::unique_ptr<NVSHandle> open_nvs_handle(const char *ns_name,
+std::unique_ptr<Handle> open_nvs_handle(const char *ns_name,
         nvs_open_mode_t open_mode,
         esp_err_t *err = nullptr);
 
@@ -303,15 +316,13 @@ constexpr ItemType itemTypeOf(const T&)
 
 // Template Implementations
 template<typename T>
-esp_err_t NVSHandle::set_item(const char *key, T value) {
+esp_err_t Handle::set_item(const char *key, T value) {
     return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 }
 
 template<typename T>
-esp_err_t NVSHandle::get_item(const char *key, T &value) {
+esp_err_t Handle::get_item(const char *key, T &value) {
     return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 }
 
 } // nvs
-
-#endif // NVS_HANDLE_HPP_
