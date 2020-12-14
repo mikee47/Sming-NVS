@@ -61,14 +61,6 @@ extern "C" {
 // clang-format on
 
 /**
- * @brief Mode of opening the non-volatile storage
- */
-typedef enum {
-	NVS_READONLY, /*!< Read only */
-	NVS_READWRITE /*!< Read and write */
-} nvs_open_mode_t;
-
-/**
  * @brief Types of variables
  *
  */
@@ -85,15 +77,6 @@ typedef enum {
 	NVS_TYPE_BLOB = 0x42, /*!< Type blob */
 	NVS_TYPE_ANY = 0xff   /*!< Must be last */
 } nvs_type_t;
-
-/**
- * @brief information about entry obtained from nvs_entry_info function
- */
-typedef struct {
-	char namespace_name[16]; /*!< Namespace to which key-value belong */
-	char key[16];			 /*!< Key of stored key-value pair */
-	nvs_type_t type;		 /*!< Type of stored key-value pair */
-} nvs_entry_info_t;
 
 /**
  * @note Info about storage space NVS.

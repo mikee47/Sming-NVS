@@ -90,7 +90,7 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
 {
 	auto err = mPageManager.load(mPartition, baseSector, sectorCount);
 	if(err != ESP_OK) {
-		mState = StorageState::INVALID;
+		mState = State::INVALID;
 		return err;
 	}
 
@@ -105,7 +105,7 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
 			NamespaceEntry* entry = new(std::nothrow) NamespaceEntry;
 
 			if(!entry) {
-				mState = StorageState::INVALID;
+				mState = State::INVALID;
 				return ESP_ERR_NO_MEM;
 			}
 
@@ -118,13 +118,13 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
 	}
 	mNamespaceUsage.set(0, true);
 	mNamespaceUsage.set(255, true);
-	mState = StorageState::ACTIVE;
+	mState = State::ACTIVE;
 
 	// Populate list of multi-page index entries.
 	TBlobIndexList blobIdxList;
 	err = populateBlobIndices(blobIdxList);
 	if(err != ESP_OK) {
-		mState = StorageState::INVALID;
+		mState = State::INVALID;
 		return ESP_ERR_NO_MEM;
 	}
 
@@ -142,7 +142,7 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
 
 bool Storage::isValid() const
 {
-	return mState == StorageState::ACTIVE;
+	return mState == State::ACTIVE;
 }
 
 esp_err_t Storage::findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page*& page, Item& item,
@@ -265,7 +265,7 @@ esp_err_t Storage::writeMultiPageBlob(uint8_t nsIndex, const char* key, const vo
 
 esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -387,7 +387,7 @@ esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key
 
 esp_err_t Storage::createOrOpenNamespace(const char* nsName, bool canCreate, uint8_t& nsIndex)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 	auto it = std::find_if(mNamespaces.begin(), mNamespaces.end(), [=](const NamespaceEntry& e) -> bool {
@@ -521,7 +521,7 @@ esp_err_t Storage::cmpMultiPageBlob(uint8_t nsIndex, const char* key, const void
 
 esp_err_t Storage::readItem(uint8_t nsIndex, ItemType datatype, const char* key, void* data, size_t dataSize)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -543,7 +543,7 @@ esp_err_t Storage::readItem(uint8_t nsIndex, ItemType datatype, const char* key,
 
 esp_err_t Storage::eraseMultiPageBlob(uint8_t nsIndex, const char* key, VerOffset chunkStart)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 	Item item;
@@ -587,7 +587,7 @@ esp_err_t Storage::eraseMultiPageBlob(uint8_t nsIndex, const char* key, VerOffse
 
 esp_err_t Storage::eraseItem(uint8_t nsIndex, ItemType datatype, const char* key)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -611,7 +611,7 @@ esp_err_t Storage::eraseItem(uint8_t nsIndex, ItemType datatype, const char* key
 
 esp_err_t Storage::eraseNamespace(uint8_t nsIndex)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -630,7 +630,7 @@ esp_err_t Storage::eraseNamespace(uint8_t nsIndex)
 
 esp_err_t Storage::getItemDataSize(uint8_t nsIndex, ItemType datatype, const char* key, size_t& dataSize)
 {
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -698,7 +698,7 @@ esp_err_t Storage::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 {
 	usedEntries = 0;
 
-	if(mState != StorageState::ACTIVE) {
+	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
 
@@ -721,69 +721,60 @@ esp_err_t Storage::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 	return ESP_OK;
 }
 
-void Storage::fillEntryInfo(Item& item, nvs_entry_info_t& info)
+Storage::ItemIterator::ItemIterator(Storage& storage, const char* ns_name, ItemType itemType)
+	: storage(storage), itemType(itemType)
 {
-	info.type = static_cast<nvs_type_t>(item.datatype);
-	strncpy(info.key, item.key, sizeof(info.key));
+	reset();
 
-	for(auto& name : mNamespaces) {
-		if(item.nsIndex == name.mIndex) {
-			strncpy(info.namespace_name, name.mName, sizeof(info.namespace_name));
-			break;
-		}
+	if(ns_name != nullptr) {
+		err = storage.createOrOpenNamespace(ns_name, false, nsIndex);
 	}
 }
 
-bool Storage::findEntry(nvs_opaque_iterator_t* it, const char* namespace_name)
+void Storage::ItemIterator::reset()
 {
-	it->entryIndex = 0;
-	it->nsIndex = Page::NS_ANY;
-	it->page = mPageManager.begin();
-
-	if(namespace_name != nullptr) {
-		if(createOrOpenNamespace(namespace_name, false, it->nsIndex) != ESP_OK) {
-			return false;
-		}
-	}
-
-	return nextEntry(it);
+	entryIndex = 0;
+	page = storage.mPageManager.begin();
 }
 
-inline bool isIterableItem(Item& item)
+bool Storage::ItemIterator::next()
 {
-	return (item.nsIndex != 0 && item.datatype != ItemType::BLOB && item.datatype != ItemType::BLOB_IDX);
-}
+	auto isIterableItem = [this]() {
+		return (nsIndex != 0 && datatype != ItemType::BLOB && datatype != ItemType::BLOB_IDX);
+	};
 
-inline bool isMultipageBlob(Item& item)
-{
-	return (item.datatype == ItemType::BLOB_DATA &&
-			!(item.chunkIndex == static_cast<uint8_t>(VerOffset::VER_0_OFFSET) ||
-			  item.chunkIndex == static_cast<uint8_t>(VerOffset::VER_1_OFFSET)));
-}
+	auto isMultipageBlob = [this]() {
+		return datatype == ItemType::BLOB_DATA && chunkIndex != uint8_t(VerOffset::VER_0_OFFSET) &&
+			   chunkIndex != uint8_t(VerOffset::VER_1_OFFSET);
+	};
 
-bool Storage::nextEntry(nvs_opaque_iterator_t* it)
-{
-	Item item;
-	esp_err_t err;
-
-	for(auto page = it->page; page != mPageManager.end(); ++page) {
+	for(; page != storage.mPageManager.end(); ++page) {
 		do {
-			err = page->findItem(it->nsIndex, (ItemType)it->type, nullptr, it->entryIndex, item);
-			it->entryIndex += item.span;
-			if(err == ESP_OK && isIterableItem(item) && !isMultipageBlob(item)) {
-				fillEntryInfo(item, it->entry_info);
-				it->page = page;
+			err = page->findItem(nsIndex, itemType, nullptr, entryIndex, *this);
+			entryIndex += span;
+			if(err == ESP_OK && isIterableItem() && !isMultipageBlob()) {
 				return true;
 			}
 		} while(err != ESP_ERR_NVS_NOT_FOUND);
 
-		it->entryIndex = 0;
+		entryIndex = 0;
 	}
 
 	return false;
 }
 
-HandlePtr Storage::open_handle(const char* ns_name, nvs_open_mode_t open_mode)
+String Storage::ItemIterator::ns_name() const
+{
+	for(auto& name : storage.mNamespaces) {
+		if(nsIndex == name.mIndex) {
+			return name.mName;
+		}
+	}
+
+	return nullptr;
+}
+
+HandlePtr Storage::open_handle(const char* ns_name, OpenMode open_mode)
 {
 	if(ns_name == nullptr) {
 		mLastError = ESP_ERR_INVALID_ARG;
@@ -791,17 +782,17 @@ HandlePtr Storage::open_handle(const char* ns_name, nvs_open_mode_t open_mode)
 	}
 
 	uint8_t nsIndex;
-	mLastError = createOrOpenNamespace(ns_name, open_mode == NVS_READWRITE, nsIndex);
+	mLastError = createOrOpenNamespace(ns_name, open_mode == OpenMode::ReadWrite, nsIndex);
 	if(mLastError != ESP_OK) {
 		return nullptr;
 	}
 
-	auto handle = new(std::nothrow) Handle(open_mode == NVS_READONLY, nsIndex, *this);
+	auto handle = new(std::nothrow) Handle(open_mode == OpenMode::ReadOnly, nsIndex, *this);
 
 	if(handle == nullptr) {
 		mLastError = ESP_ERR_NO_MEM;
 	} else {
-		handles.push_back(handle);
+		handle_list.push_back(handle);
 		mLastError = ESP_OK;
 	}
 
@@ -810,18 +801,18 @@ HandlePtr Storage::open_handle(const char* ns_name, nvs_open_mode_t open_mode)
 
 void Storage::invalidate_handles()
 {
-	for(auto it = handles.begin(); it != handles.end(); ++it) {
+	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
 		it->valid = false;
-		handles.erase(it);
+		handle_list.erase(it);
 	}
 }
 
 bool Storage::close_handle(Handle* handle)
 {
-	for(auto it = handles.begin(); it != handles.end(); ++it) {
+	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
 		if(*it == *handle) {
 			it->valid = false;
-			handles.erase(it);
+			handle_list.erase(it);
 			return true;
 		}
 	}

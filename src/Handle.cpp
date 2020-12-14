@@ -143,14 +143,4 @@ esp_err_t Handle::calcEntriesInNamespace(size_t& usedEntries)
 	return mStorage.calcEntriesInNamespace(mNsIndex, usedEntries);
 }
 
-bool Handle::findEntry(nvs_opaque_iterator_t* it, const char* name)
-{
-	return mStorage.findEntry(it, name);
-}
-
-bool Handle::nextEntry(nvs_opaque_iterator_t* it)
-{
-	return mStorage.nextEntry(it);
-}
-
 } // namespace nvs

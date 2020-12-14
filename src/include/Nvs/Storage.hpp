@@ -19,16 +19,23 @@
 #include "Item.hpp"
 #include "Page.hpp"
 #include "PageManager.hpp"
+#include "Handle.hpp"
 
 //extern void dumpBytes(const uint8_t* data, size_t count);
 
 namespace nvs
 {
-class Handle;
+/**
+ * @brief Mode of opening the non-volatile storage
+ */
+enum class OpenMode {
+	ReadOnly,
+	ReadWrite,
+};
 
 class Storage : public intrusive_list_node<Storage>
 {
-	enum class StorageState : uint32_t {
+	enum class State {
 		INVALID,
 		ACTIVE,
 	};
@@ -58,6 +65,31 @@ class Storage : public intrusive_list_node<Storage>
 
 	typedef intrusive_list<BlobIndexNode> TBlobIndexList;
 
+	class ItemIterator : public Item
+	{
+	public:
+		ItemIterator(Storage& storage, const char* ns_name, ItemType itemType);
+
+		void reset();
+
+		bool next();
+
+		explicit operator bool() const
+		{
+			return page && err == ESP_OK;
+		}
+
+		String ns_name() const;
+
+	private:
+		Storage& storage;
+		ItemType itemType;
+		uint8_t nsIndex{Page::NS_ANY};
+		size_t entryIndex{0};
+		intrusive_list<nvs::Page>::iterator page;
+		err_t err{ESP_OK};
+	};
+
 public:
 	~Storage();
 
@@ -71,7 +103,7 @@ public:
 
 	esp_err_t createOrOpenNamespace(const char* nsName, bool canCreate, uint8_t& nsIndex);
 
-	HandlePtr open_handle(const char* ns_name, nvs_open_mode_t open_mode);
+	HandlePtr open_handle(const char* ns_name, OpenMode open_mode);
 
 	esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize);
 
@@ -125,9 +157,10 @@ public:
 
 	esp_err_t calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries);
 
-	bool findEntry(nvs_opaque_iterator_t*, const char* name);
-
-	bool nextEntry(nvs_opaque_iterator_t* it);
+	ItemIterator findEntry(const char* namespace_name = nullptr, ItemType itemType = ItemType::ANY)
+	{
+		return ItemIterator(*this, namespace_name, itemType);
+	}
 
 	esp_err_t lastError() const
 	{
@@ -138,6 +171,7 @@ public:
 
 private:
 	friend Handle;
+	friend ItemIterator;
 
 	Page& getCurrentPage()
 	{
@@ -150,8 +184,6 @@ private:
 
 	void eraseOrphanDataBlobs(TBlobIndexList&);
 
-	void fillEntryInfo(Item& item, nvs_entry_info_t& info);
-
 	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page*& page, Item& item,
 					   uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
@@ -159,22 +191,16 @@ private:
 	bool close_handle(Handle* handle);
 
 	Partition& mPartition;
-	intrusive_list<Handle> handles;
+	intrusive_list<Handle> handle_list;
 	size_t mPageCount;
 	PageManager mPageManager;
 	TNamespaces mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
-	StorageState mState = StorageState::INVALID;
+	State mState{State::INVALID};
 	esp_err_t mLastError{ESP_OK};
 };
 
 } // namespace nvs
 
-struct nvs_opaque_iterator_t {
-	nvs_type_t type;
-	uint8_t nsIndex;
-	size_t entryIndex;
-	nvs::Storage* storage;
-	intrusive_list<nvs::Page>::iterator page;
-	nvs_entry_info_t entry_info;
-};
+static constexpr nvs::OpenMode NVS_READONLY{nvs::OpenMode::ReadOnly};
+static constexpr nvs::OpenMode NVS_READWRITE{nvs::OpenMode::ReadWrite};

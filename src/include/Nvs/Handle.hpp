@@ -19,32 +19,14 @@
 #include <type_traits>
 
 #include "nvs.h"
+#include "Item.hpp"
 #include "intrusive_list.h"
 
-class nvs_opaque_iterator_t;
+class ItemIterator;
 
 namespace nvs
 {
 class Storage;
-
-/**
- * The possible blob types. This is a helper definition for template functions.
- */
-enum class ItemType : uint8_t {
-	U8 = NVS_TYPE_U8,
-	I8 = NVS_TYPE_I8,
-	U16 = NVS_TYPE_U16,
-	I16 = NVS_TYPE_I16,
-	U32 = NVS_TYPE_U32,
-	I32 = NVS_TYPE_I32,
-	U64 = NVS_TYPE_U64,
-	I64 = NVS_TYPE_I64,
-	SZ = NVS_TYPE_STR,
-	BLOB = 0x41,
-	BLOB_DATA = NVS_TYPE_BLOB,
-	BLOB_IDX = 0x48,
-	ANY = NVS_TYPE_ANY
-};
 
 /**
  * @brief A handle allowing nvs-entry related operations on the NVS.
@@ -218,10 +200,6 @@ public:
 
 	esp_err_t calcEntriesInNamespace(size_t& usedEntries);
 
-	bool findEntry(nvs_opaque_iterator_t* it, const char* name);
-
-	bool nextEntry(nvs_opaque_iterator_t* it);
-
 	Storage& storage()
 	{
 		return mStorage;
@@ -263,29 +241,6 @@ private:
 };
 
 using HandlePtr = std::unique_ptr<Handle>;
-
-// Helper functions for template usage
-/**
- * Help to translate all integral types into ItemType.
- */
-template <typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
-constexpr ItemType itemTypeOf()
-{
-	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
-}
-
-/**
- * Help to translate all enum types into integral ItemType.
- */
-template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0> constexpr ItemType itemTypeOf()
-{
-	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
-}
-
-template <typename T> constexpr ItemType itemTypeOf(const T&)
-{
-	return itemTypeOf<T>();
-}
 
 // Template Implementations
 template <typename T> esp_err_t Handle::set_item(const char* key, T value)

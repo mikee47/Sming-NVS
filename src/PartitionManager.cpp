@@ -84,7 +84,7 @@ bool PartitionManager::init_partition(const char* partition_label)
 		return false;
 	}
 
-	auto storage = lookup_storage_from_name(partition_label);
+	auto storage = lookup_storage(partition_label);
 	if(storage != nullptr) {
 		mLastError = ESP_OK;
 		return true;
@@ -101,14 +101,14 @@ bool PartitionManager::init_partition(const char* partition_label)
 		return false;
 	}
 
-	nvs_partition_list.push_back(p);
+	partition_list.push_back(p);
 
 	return true;
 }
 
 bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount)
 {
-	auto storage = lookup_storage_from_name(partition->name());
+	auto storage = lookup_storage(partition->name());
 	if(storage == nullptr) {
 		storage = new(std::nothrow) Storage(*partition);
 
@@ -118,7 +118,7 @@ bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, ui
 		} else {
 			mLastError = storage->init(baseSector, sectorCount);
 			if(mLastError == ESP_OK) {
-				nvs_storage_list.push_back(storage);
+				storage_list.push_back(storage);
 			} else {
 				delete storage;
 			}
@@ -141,7 +141,7 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return false;
 	}
 
-	auto storage = lookup_storage_from_name(part_name);
+	auto storage = lookup_storage(part_name);
 	if(storage != nullptr) {
 		mLastError = ESP_OK;
 		return true;
@@ -161,23 +161,23 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return false;
 	}
 
-	nvs_partition_list.push_back(p);
+	partition_list.push_back(p);
 	return true;
 }
 #endif // CONFIG_NVS_ENCRYPTION
 
 bool PartitionManager::deinit_partition(const char* partition_label)
 {
-	Storage* storage = lookup_storage_from_name(partition_label);
+	Storage* storage = lookup_storage(partition_label);
 	if(!storage) {
 		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
-	nvs_storage_list.erase(storage);
+	storage_list.erase(storage);
 	delete storage;
 
-	for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
+	for(auto it = partition_list.begin(); it != partition_list.end(); ++it) {
 		if(it->name() == partition_label) {
 			delete static_cast<Partition*>(it);
 			break;
@@ -188,16 +188,10 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 	return true;
 }
 
-HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode)
+HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, OpenMode open_mode)
 {
-	if(nvs_storage_list.empty()) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
-		return nullptr;
-	}
-
-	auto storage = lookup_storage_from_name(part_name);
+	auto storage = lookup_storage(part_name);
 	if(storage == nullptr) {
-		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
 		return nullptr;
 	}
 
@@ -210,23 +204,27 @@ void PartitionManager::remove_partition(Partition* partition)
 {
 	assert(partition != nullptr);
 
-	for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
+	for(auto it = partition_list.begin(); it != partition_list.end(); ++it) {
 		if(partition == it) {
-			nvs_partition_list.erase(it);
+			partition_list.erase(it);
 			break;
 		}
 	}
 }
 
-Storage* PartitionManager::lookup_storage_from_name(const String& name)
+Storage* PartitionManager::lookup_storage(const String& part_name)
 {
-	auto it = find_if(begin(nvs_storage_list), end(nvs_storage_list),
-					  [=](Storage& e) -> bool { return e.partition().name() == name; });
-
-	if(it == end(nvs_storage_list)) {
+	if(storage_list.empty()) {
+		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return nullptr;
 	}
-	return it;
+
+	auto it = find_if(begin(storage_list), end(storage_list),
+					  [=](Storage& e) -> bool { return e.partition().name() == part_name; });
+
+	Storage* storage = it;
+	mLastError = (storage == nullptr) ? ESP_ERR_NOT_FOUND : ESP_OK;
+	return storage;
 }
 
 } // namespace nvs

@@ -38,11 +38,11 @@ public:
 
 	bool deinit_partition(const char* partition_label);
 
-	Storage* lookup_storage_from_name(const String& name);
+	Storage* lookup_storage(const String& part_name);
 
-	HandlePtr open(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode);
+	HandlePtr open(const char* part_name, const char* ns_name, OpenMode open_mode);
 
-	HandlePtr open(const char* ns_name, nvs_open_mode_t open_mode)
+	HandlePtr open(const char* ns_name, OpenMode open_mode)
 	{
 		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
 	}
@@ -61,8 +61,8 @@ protected:
 	// Called from Partition destructor
 	void remove_partition(Partition* partition);
 
-	intrusive_list<nvs::Storage> nvs_storage_list;
-	intrusive_list<nvs::Partition> nvs_partition_list;
+	intrusive_list<nvs::Storage> storage_list;
+	intrusive_list<nvs::Partition> partition_list;
 	esp_err_t mLastError{ESP_OK};
 };
 

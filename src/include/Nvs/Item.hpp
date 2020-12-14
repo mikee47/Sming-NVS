@@ -19,7 +19,6 @@
 #include <cassert>
 #include <algorithm>
 #include "nvs.h"
-#include "Handle.hpp"
 #include "CompressedEnumTable.hpp"
 #include "string.h"
 
@@ -39,9 +38,50 @@ enum class VerOffset : uint8_t {
 	VER_ANY = 0xff,
 };
 
+/**
+ * The possible blob types. This is a helper definition for template functions.
+ */
+enum class ItemType : uint8_t {
+	U8 = NVS_TYPE_U8,
+	I8 = NVS_TYPE_I8,
+	U16 = NVS_TYPE_U16,
+	I16 = NVS_TYPE_I16,
+	U32 = NVS_TYPE_U32,
+	I32 = NVS_TYPE_I32,
+	U64 = NVS_TYPE_U64,
+	I64 = NVS_TYPE_I64,
+	SZ = NVS_TYPE_STR,
+	BLOB = 0x41,
+	BLOB_DATA = NVS_TYPE_BLOB,
+	BLOB_IDX = 0x48,
+	ANY = NVS_TYPE_ANY
+};
+
 inline bool isVariableLengthType(ItemType type)
 {
 	return (type == ItemType::BLOB || type == ItemType::SZ || type == ItemType::BLOB_DATA);
+}
+
+/**
+ * Help to translate all integral types into ItemType.
+ */
+template <typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
+constexpr ItemType itemTypeOf()
+{
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
+}
+
+/**
+ * Help to translate all enum types into integral ItemType.
+ */
+template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0> constexpr ItemType itemTypeOf()
+{
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
+}
+
+template <typename T> constexpr ItemType itemTypeOf(const T&)
+{
+	return itemTypeOf<T>();
 }
 
 class Item
