@@ -23,10 +23,6 @@ namespace nvs
 class PartitionManager
 {
 public:
-	virtual ~PartitionManager()
-	{
-	}
-
 	Partition* lookup_partition(const char* label);
 #ifdef CONFIG_NVS_ENCRYPTION
 	Partition* lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
@@ -51,7 +47,10 @@ public:
 		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
 	}
 
-	size_t open_handles_size();
+	size_t open_handles_size() const
+	{
+		return nvs_handles.size();
+	}
 
 	esp_err_t lastError() const
 	{
@@ -60,8 +59,16 @@ public:
 
 protected:
 	friend Handle;
+	friend Partition;
 
+	::Storage::Partition find_partition(const char* label);
+	void invalidateHandles(Storage* storage);
+
+	// Called from Handle destructor
 	void close_handle(Handle* handle);
+
+	// Called from Partition destructor
+	void remove_partition(Partition* partition);
 
 	intrusive_list<Handle> nvs_handles;
 	intrusive_list<nvs::Storage> nvs_storage_list;

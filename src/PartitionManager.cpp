@@ -22,53 +22,57 @@ namespace nvs
 {
 PartitionManager partitionManager;
 
-Partition* PartitionManager::lookup_partition(const char* label)
+::Storage::Partition PartitionManager::find_partition(const char* label)
 {
-	Partition* partition{};
-
 	auto part = ::Storage::PartitionTable().find(label);
 	if(!part) {
 		mLastError = ESP_ERR_NOT_FOUND;
 	} else if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
 		mLastError = ESP_ERR_NOT_SUPPORTED;
+		part = ::Storage::Partition{};
 	} else if(part.isEncrypted()) {
 		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
+		part = ::Storage::Partition{};
 	} else {
-		partition = new(std::nothrow) Partition(part);
-		mLastError = partition ? ESP_OK : ESP_ERR_NO_MEM;
+		mLastError = ESP_OK;
 	}
 
+	return part;
+}
+
+Partition* PartitionManager::lookup_partition(const char* label)
+{
+	auto part = find_partition(label);
+	if(!part) {
+		return nullptr;
+	}
+
+	auto partition = new(std::nothrow) Partition(part);
+	mLastError = partition ? ESP_OK : ESP_ERR_NO_MEM;
 	return partition;
 }
 
 #ifdef CONFIG_NVS_ENCRYPTION
 Partition* PartitionManager::lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg)
 {
-	Partition* partition{};
-
-	auto part = ::Storage::PartitionTable().find(label);
+	auto part = find_partition(label);
 	if(!part) {
-		mLastError = ESP_ERR_NOT_FOUND;
-	} else if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
-		mLastError = ESP_ERR_NOT_SUPPORTED;
-	} else if(part.isEncrypted()) {
-		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
-	} else {
-		auto enc_p = new(std::nothrow) NVSEncryptedPartition(part);
+		return nullptr;
+	}
 
-		if(enc_p == nullptr) {
-			mLastError = ESP_ERR_NO_MEM;
-		} else {
-			mLastError = enc_p->init(cfg);
-			if(mLastError != ESP_OK) {
-				delete enc_p;
-			} else {
-				partition = enc_p;
-			}
+	auto enc_p = new(std::nothrow) NVSEncryptedPartition(part);
+
+	if(enc_p == nullptr) {
+		mLastError = ESP_ERR_NO_MEM;
+	} else {
+		mLastError = enc_p->init(cfg);
+		if(mLastError != ESP_OK) {
+			delete enc_p;
+			enc_p = nullptr;
 		}
 	}
 
-	return partition;
+	return enc_p;
 }
 
 #endif // CONFIG_NVS_ENCRYPTION
@@ -120,14 +124,8 @@ bool PartitionManager::init_custom(Partition* partition, uint32_t baseSector, ui
 			}
 		}
 	} else {
-		// Storage was already initialized, delete un-needed partition
-		for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
-			if(partition == it) {
-				nvs_partition_list.erase(it);
-				delete partition;
-				break;
-			}
-		}
+		// Storage was already initialized, don't need partition copy
+		delete partition;
 
 		mLastError = storage->init(baseSector, sectorCount);
 	}
@@ -160,7 +158,6 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 	}
 
 	if(!init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE)) {
-		delete p;
 		return false;
 	}
 
@@ -177,13 +174,7 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 		return false;
 	}
 
-	/* Clean up handles related to the storage being deinitialized */
-	for(auto it = nvs_handles.begin(); it != nvs_handles.end(); ++it) {
-		if(it->mStoragePtr == storage) {
-			it->valid = false;
-			nvs_handles.erase(it);
-		}
-	}
+	invalidateHandles(storage);
 
 	/* Finally delete the storage and its partition */
 	nvs_storage_list.erase(storage);
@@ -191,15 +182,23 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 
 	for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
 		if(it->name() == partition_label) {
-			Partition* p = it;
-			nvs_partition_list.erase(it);
-			delete p;
+			delete static_cast<Partition*>(it);
 			break;
 		}
 	}
 
 	mLastError = ESP_OK;
 	return true;
+}
+
+void PartitionManager::invalidateHandles(Storage* storage)
+{
+	for(auto it = nvs_handles.begin(); it != nvs_handles.end(); ++it) {
+		if(it->mStoragePtr == storage) {
+			it->valid = false;
+			nvs_handles.erase(it);
+		}
+	}
 }
 
 HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode)
@@ -252,9 +251,14 @@ void PartitionManager::close_handle(Handle* handle)
 	}
 }
 
-size_t PartitionManager::open_handles_size()
+void PartitionManager::remove_partition(Partition* partition)
 {
-	return nvs_handles.size();
+	for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
+		if(partition == it) {
+			nvs_partition_list.erase(it);
+			break;
+		}
+	}
 }
 
 Storage* PartitionManager::lookup_storage_from_name(const String& name)

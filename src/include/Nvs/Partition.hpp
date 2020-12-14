@@ -16,6 +16,7 @@
 
 #include <Storage/Partition.h>
 #include "intrusive_list.h"
+#include "esp_err.h"
 
 #define ESP_ERR_FLASH_OP_FAIL (ESP_ERR_FLASH_BASE + 1)
 
@@ -34,9 +35,7 @@ public:
 	{
 	}
 
-	virtual ~Partition()
-	{
-	}
+	virtual ~Partition();
 
 	virtual esp_err_t read(size_t offset, void* dst, size_t size)
 	{
