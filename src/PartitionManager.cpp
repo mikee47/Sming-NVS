@@ -174,9 +174,6 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 		return false;
 	}
 
-	invalidateHandles(storage);
-
-	/* Finally delete the storage and its partition */
 	nvs_storage_list.erase(storage);
 	delete storage;
 
@@ -191,68 +188,28 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 	return true;
 }
 
-void PartitionManager::invalidateHandles(Storage* storage)
-{
-	for(auto it = nvs_handles.begin(); it != nvs_handles.end(); ++it) {
-		if(it->mStoragePtr == storage) {
-			it->valid = false;
-			nvs_handles.erase(it);
-		}
-	}
-}
-
 HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode)
 {
-	if(part_name == nullptr || ns_name == nullptr) {
-		mLastError = ESP_ERR_INVALID_ARG;
-		return nullptr;
-	}
-
 	if(nvs_storage_list.empty()) {
 		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return nullptr;
 	}
 
-	Storage* sHandle = lookup_storage_from_name(part_name);
-	if(sHandle == nullptr) {
+	auto storage = lookup_storage_from_name(part_name);
+	if(storage == nullptr) {
 		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
 		return nullptr;
 	}
 
-	uint8_t nsIndex;
-	mLastError = sHandle->createOrOpenNamespace(ns_name, open_mode == NVS_READWRITE, nsIndex);
-	if(mLastError != ESP_OK) {
-		return nullptr;
-	}
-
-	auto handle = new(std::nothrow) Handle(open_mode == NVS_READONLY, nsIndex, sHandle);
-
-	if(handle == nullptr) {
-		mLastError = ESP_ERR_NO_MEM;
-	} else {
-		nvs_handles.push_back(handle);
-		mLastError = ESP_OK;
-	}
-
-	return HandlePtr(handle);
-}
-
-void PartitionManager::close_handle(Handle* handle)
-{
-	if(handle == nullptr) {
-		return;
-	}
-
-	for(auto it = nvs_handles.begin(); it != nvs_handles.end(); ++it) {
-		if(it == intrusive_list<Handle>::iterator(handle)) {
-			nvs_handles.erase(it);
-			break;
-		}
-	}
+	auto handle = storage->open_handle(ns_name, open_mode);
+	mLastError = storage->lastError();
+	return handle;
 }
 
 void PartitionManager::remove_partition(Partition* partition)
 {
+	assert(partition != nullptr);
+
 	for(auto it = nvs_partition_list.begin(); it != nvs_partition_list.end(); ++it) {
 		if(partition == it) {
 			nvs_partition_list.erase(it);

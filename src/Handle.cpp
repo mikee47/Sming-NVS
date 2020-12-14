@@ -20,7 +20,7 @@ namespace nvs
 {
 Handle::~Handle()
 {
-	partitionManager.close_handle(this);
+	mStorage.close_handle(this);
 }
 
 esp_err_t Handle::set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
@@ -30,7 +30,7 @@ esp_err_t Handle::set_typed_item(ItemType datatype, const char* key, const void*
 	if(mReadOnly)
 		return ESP_ERR_NVS_READ_ONLY;
 
-	return mStoragePtr->writeItem(mNsIndex, datatype, key, data, dataSize);
+	return mStorage.writeItem(mNsIndex, datatype, key, data, dataSize);
 }
 
 esp_err_t Handle::get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
@@ -38,7 +38,7 @@ esp_err_t Handle::get_typed_item(ItemType datatype, const char* key, void* data,
 	if(!valid)
 		return ESP_ERR_NVS_INVALID_HANDLE;
 
-	return mStoragePtr->readItem(mNsIndex, datatype, key, data, dataSize);
+	return mStorage.readItem(mNsIndex, datatype, key, data, dataSize);
 }
 
 esp_err_t Handle::set_string(const char* key, const char* str)
@@ -48,7 +48,7 @@ esp_err_t Handle::set_string(const char* key, const char* str)
 	if(mReadOnly)
 		return ESP_ERR_NVS_READ_ONLY;
 
-	return mStoragePtr->writeItem(mNsIndex, nvs::ItemType::SZ, key, str, strlen(str) + 1);
+	return mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, str, strlen(str) + 1);
 }
 
 esp_err_t Handle::set_blob(const char* key, const void* blob, size_t len)
@@ -58,7 +58,7 @@ esp_err_t Handle::set_blob(const char* key, const void* blob, size_t len)
 	if(mReadOnly)
 		return ESP_ERR_NVS_READ_ONLY;
 
-	return mStoragePtr->writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
+	return mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
 }
 
 esp_err_t Handle::get_string(const char* key, char* out_str, size_t len)
@@ -66,7 +66,7 @@ esp_err_t Handle::get_string(const char* key, char* out_str, size_t len)
 	if(!valid)
 		return ESP_ERR_NVS_INVALID_HANDLE;
 
-	return mStoragePtr->readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
+	return mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
 }
 
 esp_err_t Handle::get_blob(const char* key, void* out_blob, size_t len)
@@ -74,7 +74,7 @@ esp_err_t Handle::get_blob(const char* key, void* out_blob, size_t len)
 	if(!valid)
 		return ESP_ERR_NVS_INVALID_HANDLE;
 
-	return mStoragePtr->readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
+	return mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
 }
 
 esp_err_t Handle::get_item_size(ItemType datatype, const char* key, size_t& size)
@@ -82,7 +82,7 @@ esp_err_t Handle::get_item_size(ItemType datatype, const char* key, size_t& size
 	if(!valid)
 		return ESP_ERR_NVS_INVALID_HANDLE;
 
-	return mStoragePtr->getItemDataSize(mNsIndex, datatype, key, size);
+	return mStorage.getItemDataSize(mNsIndex, datatype, key, size);
 }
 
 esp_err_t Handle::erase_item(const char* key)
@@ -92,7 +92,7 @@ esp_err_t Handle::erase_item(const char* key)
 	if(mReadOnly)
 		return ESP_ERR_NVS_READ_ONLY;
 
-	return mStoragePtr->eraseItem(mNsIndex, key);
+	return mStorage.eraseItem(mNsIndex, key);
 }
 
 esp_err_t Handle::erase_all()
@@ -102,7 +102,7 @@ esp_err_t Handle::erase_all()
 	if(mReadOnly)
 		return ESP_ERR_NVS_READ_ONLY;
 
-	return mStoragePtr->eraseNamespace(mNsIndex);
+	return mStorage.eraseNamespace(mNsIndex);
 }
 
 esp_err_t Handle::commit()
@@ -121,7 +121,7 @@ esp_err_t Handle::get_used_entry_count(size_t& used_entries)
 		return ESP_ERR_NVS_INVALID_HANDLE;
 
 	size_t used_entry_count;
-	esp_err_t err = mStoragePtr->calcEntriesInNamespace(mNsIndex, used_entry_count);
+	esp_err_t err = mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count);
 	if(err == ESP_OK) {
 		used_entries = used_entry_count;
 	}
@@ -130,27 +130,27 @@ esp_err_t Handle::get_used_entry_count(size_t& used_entries)
 
 void Handle::debugDump()
 {
-	return mStoragePtr->debugDump();
+	return mStorage.debugDump();
 }
 
 esp_err_t Handle::fillStats(nvs_stats_t& nvsStats)
 {
-	return mStoragePtr->fillStats(nvsStats);
+	return mStorage.fillStats(nvsStats);
 }
 
 esp_err_t Handle::calcEntriesInNamespace(size_t& usedEntries)
 {
-	return mStoragePtr->calcEntriesInNamespace(mNsIndex, usedEntries);
+	return mStorage.calcEntriesInNamespace(mNsIndex, usedEntries);
 }
 
 bool Handle::findEntry(nvs_opaque_iterator_t* it, const char* name)
 {
-	return mStoragePtr->findEntry(it, name);
+	return mStorage.findEntry(it, name);
 }
 
 bool Handle::nextEntry(nvs_opaque_iterator_t* it)
 {
-	return mStoragePtr->nextEntry(it);
+	return mStorage.nextEntry(it);
 }
 
 } // namespace nvs

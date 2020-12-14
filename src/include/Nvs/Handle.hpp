@@ -53,11 +53,9 @@ enum class ItemType : uint8_t {
  */
 class Handle : public intrusive_list_node<Handle>
 {
-	friend class PartitionManager;
-
 public:
-	Handle(bool readOnly, uint8_t nsIndex, Storage* StoragePtr)
-		: mStoragePtr(StoragePtr), mNsIndex(nsIndex), mReadOnly(readOnly), valid(true)
+	Handle(bool readOnly, uint8_t nsIndex, Storage& storage)
+		: mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly), valid(true)
 	{
 	}
 
@@ -224,16 +222,28 @@ public:
 
 	bool nextEntry(nvs_opaque_iterator_t* it);
 
+	Storage& storage()
+	{
+		return mStorage;
+	}
+
+	bool operator==(const Handle& other) const
+	{
+		return this == &other;
+	}
+
 protected:
 	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize);
 
 	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize);
 
 private:
+	friend class Storage;
+
 	/**
      * The underlying storage's object.
      */
-	Storage* mStoragePtr;
+	Storage& mStorage;
 
 	/**
      * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).
@@ -253,35 +263,6 @@ private:
 };
 
 using HandlePtr = std::unique_ptr<Handle>;
-
-/**
- * @brief Opens non-volatile storage and returns a handle object.
- *
- * The handle is automatically closed on desctruction. The scope of the handle is the namespace ns_name
- * in a particular partition partition_name.
- * The parameters partition_name, ns_name and open_mode have the same meaning and restrictions as the parameters
- * part_name, name and open_mode in \ref nvs_open_from_partition, respectively.
- *
- * @param err an optional pointer to an esp_err_t result of the open operation, having the same meaning as the return
- * value in \ref nvs_open_from_partition:
- *             - ESP_OK if storage handle was opened successfully
- *             - ESP_ERR_NVS_NOT_INITIALIZED if the storage driver is not initialized
- *             - ESP_ERR_NVS_PART_NOT_FOUND if the partition with label "nvs" is not found
- *             - ESP_ERR_NVS_NOT_FOUND id namespace doesn't exist yet and
- *               mode is NVS_READONLY
- *             - ESP_ERR_NVS_INVALID_NAME if namespace name doesn't satisfy constraints
- *             - other error codes from the underlying storage driver
- *
- * @return shared pointer of an nvs handle on success, an empty shared pointer otherwise
- */
-HandlePtr open_nvs_handle_from_partition(const char* partition_name, const char* ns_name, nvs_open_mode_t open_mode,
-										 esp_err_t* err = nullptr);
-
-/**
- * @brief This function does the same as \ref open_nvs_handle_from_partition but uses the default nvs partition
- * instead of a partition_name parameter.
- */
-HandlePtr open_nvs_handle(const char* ns_name, nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
 
 // Helper functions for template usage
 /**

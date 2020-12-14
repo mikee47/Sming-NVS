@@ -47,11 +47,6 @@ public:
 		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
 	}
 
-	size_t open_handles_size() const
-	{
-		return nvs_handles.size();
-	}
-
 	esp_err_t lastError() const
 	{
 		return mLastError;
@@ -62,15 +57,10 @@ protected:
 	friend Partition;
 
 	::Storage::Partition find_partition(const char* label);
-	void invalidateHandles(Storage* storage);
-
-	// Called from Handle destructor
-	void close_handle(Handle* handle);
 
 	// Called from Partition destructor
 	void remove_partition(Partition* partition);
 
-	intrusive_list<Handle> nvs_handles;
 	intrusive_list<nvs::Storage> nvs_storage_list;
 	intrusive_list<nvs::Partition> nvs_partition_list;
 	esp_err_t mLastError{ESP_OK};

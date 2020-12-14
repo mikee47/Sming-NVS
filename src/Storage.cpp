@@ -22,6 +22,7 @@ namespace nvs
 {
 Storage::~Storage()
 {
+	invalidate_handles();
 	clearNamespaces();
 }
 
@@ -777,6 +778,52 @@ bool Storage::nextEntry(nvs_opaque_iterator_t* it)
 		} while(err != ESP_ERR_NVS_NOT_FOUND);
 
 		it->entryIndex = 0;
+	}
+
+	return false;
+}
+
+HandlePtr Storage::open_handle(const char* ns_name, nvs_open_mode_t open_mode)
+{
+	if(ns_name == nullptr) {
+		mLastError = ESP_ERR_INVALID_ARG;
+		return nullptr;
+	}
+
+	uint8_t nsIndex;
+	mLastError = createOrOpenNamespace(ns_name, open_mode == NVS_READWRITE, nsIndex);
+	if(mLastError != ESP_OK) {
+		return nullptr;
+	}
+
+	auto handle = new(std::nothrow) Handle(open_mode == NVS_READONLY, nsIndex, *this);
+
+	if(handle == nullptr) {
+		mLastError = ESP_ERR_NO_MEM;
+	} else {
+		handles.push_back(handle);
+		mLastError = ESP_OK;
+	}
+
+	return HandlePtr(handle);
+}
+
+void Storage::invalidate_handles()
+{
+	for(auto it = handles.begin(); it != handles.end(); ++it) {
+		it->valid = false;
+		handles.erase(it);
+	}
+}
+
+bool Storage::close_handle(Handle* handle)
+{
+	for(auto it = handles.begin(); it != handles.end(); ++it) {
+		if(*it == *handle) {
+			it->valid = false;
+			handles.erase(it);
+			return true;
+		}
 	}
 
 	return false;

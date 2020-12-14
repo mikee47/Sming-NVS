@@ -24,6 +24,8 @@
 
 namespace nvs
 {
+class Handle;
+
 class Storage : public intrusive_list_node<Storage>
 {
 	enum class StorageState : uint32_t {
@@ -68,6 +70,8 @@ public:
 	bool isValid() const;
 
 	esp_err_t createOrOpenNamespace(const char* nsName, bool canCreate, uint8_t& nsIndex);
+
+	HandlePtr open_handle(const char* ns_name, nvs_open_mode_t open_mode);
 
 	esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize);
 
@@ -125,7 +129,16 @@ public:
 
 	bool nextEntry(nvs_opaque_iterator_t* it);
 
-protected:
+	esp_err_t lastError() const
+	{
+		return mLastError;
+	}
+
+	void invalidate_handles();
+
+private:
+	friend Handle;
+
 	Page& getCurrentPage()
 	{
 		return mPageManager.back();
@@ -142,13 +155,17 @@ protected:
 	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page*& page, Item& item,
 					   uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-protected:
+	// Called from Handle destructor
+	bool close_handle(Handle* handle);
+
 	Partition& mPartition;
+	intrusive_list<Handle> handles;
 	size_t mPageCount;
 	PageManager mPageManager;
 	TNamespaces mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
 	StorageState mState = StorageState::INVALID;
+	esp_err_t mLastError{ESP_OK};
 };
 
 } // namespace nvs
