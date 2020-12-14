@@ -23,48 +23,47 @@
 
 class nvs_opaque_iterator_t;
 
-namespace nvs {
-
+namespace nvs
+{
 class Storage;
 
 /**
  * The possible blob types. This is a helper definition for template functions.
  */
 enum class ItemType : uint8_t {
-    U8   = NVS_TYPE_U8,
-    I8   = NVS_TYPE_I8,
-    U16  = NVS_TYPE_U16,
-    I16  = NVS_TYPE_I16,
-    U32  = NVS_TYPE_U32,
-    I32  = NVS_TYPE_I32,
-    U64  = NVS_TYPE_U64,
-    I64  = NVS_TYPE_I64,
-    SZ   = NVS_TYPE_STR,
-    BLOB = 0x41,
-    BLOB_DATA = NVS_TYPE_BLOB,
-    BLOB_IDX  = 0x48,
-    ANY  = NVS_TYPE_ANY
+	U8 = NVS_TYPE_U8,
+	I8 = NVS_TYPE_I8,
+	U16 = NVS_TYPE_U16,
+	I16 = NVS_TYPE_I16,
+	U32 = NVS_TYPE_U32,
+	I32 = NVS_TYPE_I32,
+	U64 = NVS_TYPE_U64,
+	I64 = NVS_TYPE_I64,
+	SZ = NVS_TYPE_STR,
+	BLOB = 0x41,
+	BLOB_DATA = NVS_TYPE_BLOB,
+	BLOB_IDX = 0x48,
+	ANY = NVS_TYPE_ANY
 };
-
 
 /**
  * @brief A handle allowing nvs-entry related operations on the NVS.
  *
  * @note The scope of this handle is the namespace of a particular partition. Outside that scope, nvs entries can't be accessed/altered.
  */
-class Handle : public intrusive_list_node<Handle> {
+class Handle : public intrusive_list_node<Handle>
+{
 	friend class PartitionManager;
+
 public:
-    Handle(bool readOnly, uint8_t nsIndex, Storage *StoragePtr) :
-        mStoragePtr(StoragePtr),
-        mNsIndex(nsIndex),
-        mReadOnly(readOnly),
-        valid(1)
-    { }
+	Handle(bool readOnly, uint8_t nsIndex, Storage* StoragePtr)
+		: mStoragePtr(StoragePtr), mNsIndex(nsIndex), mReadOnly(readOnly), valid(1)
+	{
+	}
 
-    ~Handle();
+	~Handle();
 
-    /**
+	/**
      * @brief      set value for given key
      *
      * Sets value for key. Note that physical storage will not be updated until nvs_commit function is called.
@@ -88,11 +87,10 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-    template<typename T>
-    esp_err_t set_item(const char *key, T value);
-    esp_err_t set_string(const char *key, const char* value);
+	template <typename T> esp_err_t set_item(const char* key, T value);
+	esp_err_t set_string(const char* key, const char* value);
 
-    /**
+	/**
      * @brief      get value for given key
      *
      * These functions retrieve value for the key, given its name. If key does not
@@ -112,10 +110,9 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-    template<typename T>
-    esp_err_t get_item(const char *key, T &value);
+	template <typename T> esp_err_t get_item(const char* key, T& value);
 
-    /**
+	/**
      * @brief       set variable length binary value for given key
      *
      * This family of functions set value for the key, given its name. Note that
@@ -141,9 +138,9 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-    esp_err_t set_blob(const char *key, const void* blob, size_t len);
+	esp_err_t set_blob(const char* key, const void* blob, size_t len);
 
-    /**
+	/**
      * @brief      get value for given key
      *
      * These functions retrieve the data of an entry, given its key. If key does not
@@ -171,34 +168,34 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-    esp_err_t get_string(const char *key, char* out_str, size_t len);
-    esp_err_t get_blob(const char *key, void* out_blob, size_t len);
+	esp_err_t get_string(const char* key, char* out_str, size_t len);
+	esp_err_t get_blob(const char* key, void* out_blob, size_t len);
 
-    /**
+	/**
      * @brief Looks up the size of an entry's data.
      *
      * For strings, this size includes the zero terminator.
      */
-    esp_err_t get_item_size(ItemType datatype, const char *key, size_t &size);
+	esp_err_t get_item_size(ItemType datatype, const char* key, size_t& size);
 
-    /**
+	/**
      * @brief Erases an entry.
      */
-    esp_err_t erase_item(const char* key);
+	esp_err_t erase_item(const char* key);
 
-    /**
+	/**
      * Erases all entries in the scope of this handle. The scope may vary, depending on the implementation.
      *
      * @not If you want to erase the whole nvs flash (partition), refer to \ref
      */
-    esp_err_t erase_all();
+	esp_err_t erase_all();
 
-    /**
+	/**
      * Commits all changes done through this handle so far.
      */
-    esp_err_t commit();
+	esp_err_t commit();
 
-    /**
+	/**
      * @brief      Calculate all entries in the scope of the handle.
      *
      * @param[out]  used_entries Returns amount of used entries from a namespace on success.
@@ -213,47 +210,47 @@ public:
      *             - Other error codes from the underlying storage driver.
      *               Return param used_entries will be filled 0.
      */
-    esp_err_t get_used_entry_count(size_t& usedEntries);
+	esp_err_t get_used_entry_count(size_t& usedEntries);
 
-    esp_err_t getItemDataSize(ItemType datatype, const char *key, size_t &dataSize);
+	esp_err_t getItemDataSize(ItemType datatype, const char* key, size_t& dataSize);
 
-    void debugDump();
+	void debugDump();
 
-    esp_err_t fillStats(nvs_stats_t &nvsStats);
+	esp_err_t fillStats(nvs_stats_t& nvsStats);
 
-    esp_err_t calcEntriesInNamespace(size_t &usedEntries);
+	esp_err_t calcEntriesInNamespace(size_t& usedEntries);
 
-    bool findEntry(nvs_opaque_iterator_t *it, const char *name);
+	bool findEntry(nvs_opaque_iterator_t* it, const char* name);
 
-    bool nextEntry(nvs_opaque_iterator_t *it);
+	bool nextEntry(nvs_opaque_iterator_t* it);
 
 protected:
-    esp_err_t set_typed_item(ItemType datatype, const char *key, const void* data, size_t dataSize);
+	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize);
 
-    esp_err_t get_typed_item(ItemType datatype, const char *key, void* data, size_t dataSize);
+	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize);
 
 private:
-    /**
+	/**
      * The underlying storage's object.
      */
-    Storage *mStoragePtr;
+	Storage* mStoragePtr;
 
-    /**
+	/**
      * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).
      */
-    uint8_t mNsIndex;
+	uint8_t mNsIndex;
 
-    /**
+	/**
      * Whether this handle is marked as read-only or read-write.
      * 0 indicates read-only, any other value read-write.
      */
-    uint8_t mReadOnly;
+	uint8_t mReadOnly;
 
-    /**
+	/**
      * Indicates the validity of this handle.
      * Upon opening, a handle is valid. It becomes invalid if the underlying storage is de-initialized.
      */
-    uint8_t valid;
+	uint8_t valid;
 };
 
 /**
@@ -276,53 +273,47 @@ private:
  *
  * @return shared pointer of an nvs handle on success, an empty shared pointer otherwise
  */
-std::unique_ptr<Handle> open_nvs_handle_from_partition(const char *partition_name,
-        const char *ns_name,
-        nvs_open_mode_t open_mode,
-        esp_err_t *err = nullptr);
+std::unique_ptr<Handle> open_nvs_handle_from_partition(const char* partition_name, const char* ns_name,
+													   nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
 
 /**
  * @brief This function does the same as \ref open_nvs_handle_from_partition but uses the default nvs partition
  * instead of a partition_name parameter.
  */
-std::unique_ptr<Handle> open_nvs_handle(const char *ns_name,
-        nvs_open_mode_t open_mode,
-        esp_err_t *err = nullptr);
+std::unique_ptr<Handle> open_nvs_handle(const char* ns_name, nvs_open_mode_t open_mode, esp_err_t* err = nullptr);
 
 // Helper functions for template usage
 /**
  * Help to translate all integral types into ItemType.
  */
-template<typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
+template <typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
 constexpr ItemType itemTypeOf()
 {
-    return static_cast<ItemType>(((std::is_signed<T>::value)?0x10:0x00) | sizeof(T));
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
 }
 
 /**
  * Help to translate all enum types into integral ItemType.
  */
-template<typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0>
-constexpr ItemType itemTypeOf()
+template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0> constexpr ItemType itemTypeOf()
 {
-    return static_cast<ItemType>(((std::is_signed<T>::value)?0x10:0x00) | sizeof(T));
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
 }
 
-template<typename T>
-constexpr ItemType itemTypeOf(const T&)
+template <typename T> constexpr ItemType itemTypeOf(const T&)
 {
-    return itemTypeOf<T>();
+	return itemTypeOf<T>();
 }
 
 // Template Implementations
-template<typename T>
-esp_err_t Handle::set_item(const char *key, T value) {
-    return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+template <typename T> esp_err_t Handle::set_item(const char* key, T value)
+{
+	return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 }
 
-template<typename T>
-esp_err_t Handle::get_item(const char *key, T &value) {
-    return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+template <typename T> esp_err_t Handle::get_item(const char* key, T& value)
+{
+	return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 }
 
-} // nvs
+} // namespace nvs

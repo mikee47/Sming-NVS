@@ -15,35 +15,31 @@
 #include "include/Nvs/PartitionManager.hpp"
 #include "include/Nvs/Handle.hpp"
 
-namespace nvs {
-
-std::unique_ptr<Handle> open_nvs_handle_from_partition(const char *partition_name,
-        const char *ns_name,
-        nvs_open_mode_t open_mode,
-        esp_err_t *err)
+namespace nvs
 {
-    if (partition_name == nullptr || ns_name == nullptr) {
-        if (err) {
-            *err = ESP_ERR_INVALID_ARG;
-        }
-        return nullptr;
-    }
+std::unique_ptr<Handle> open_nvs_handle_from_partition(const char* partition_name, const char* ns_name,
+													   nvs_open_mode_t open_mode, esp_err_t* err)
+{
+	if(partition_name == nullptr || ns_name == nullptr) {
+		if(err) {
+			*err = ESP_ERR_INVALID_ARG;
+		}
+		return nullptr;
+	}
 
-    Handle *handle;
-    esp_err_t result = partitionManager.open_handle(partition_name, ns_name, open_mode, handle);
+	Handle* handle;
+	esp_err_t result = partitionManager.open_handle(partition_name, ns_name, open_mode, handle);
 
-    if (err) {
-        *err = result;
-    }
+	if(err) {
+		*err = result;
+	}
 
-    return std::unique_ptr<Handle>(handle);
+	return std::unique_ptr<Handle>(handle);
 }
 
-std::unique_ptr<Handle> open_nvs_handle(const char *ns_name,
-        nvs_open_mode_t open_mode,
-        esp_err_t *err)
+std::unique_ptr<Handle> open_nvs_handle(const char* ns_name, nvs_open_mode_t open_mode, esp_err_t* err)
 {
-    return open_nvs_handle_from_partition(NVS_DEFAULT_PART_NAME, ns_name, open_mode, err);
+	return open_nvs_handle_from_partition(NVS_DEFAULT_PART_NAME, ns_name, open_mode, err);
 }
 
 } // namespace nvs

@@ -24,54 +24,56 @@ namespace nvs
 {
 class PageManager
 {
-    using TPageList = intrusive_list<Page>;
-    using TPageListIterator = TPageList::iterator;
+	using TPageList = intrusive_list<Page>;
+	using TPageListIterator = TPageList::iterator;
+
 public:
+	PageManager()
+	{
+	}
 
-    PageManager() {}
+	esp_err_t load(Partition& partition, uint32_t baseSector, uint32_t sectorCount);
 
-    esp_err_t load(Partition& partition, uint32_t baseSector, uint32_t sectorCount);
+	TPageListIterator begin()
+	{
+		return mPageList.begin();
+	}
 
-    TPageListIterator begin()
-    {
-        return mPageList.begin();
-    }
+	TPageListIterator end()
+	{
+		return mPageList.end();
+	}
 
-    TPageListIterator end()
-    {
-        return mPageList.end();
-    }
+	Page& back()
+	{
+		return mPageList.back();
+	}
 
-    Page& back()
-    {
-        return mPageList.back();
-    }
+	uint32_t getPageCount()
+	{
+		return mPageCount;
+	}
 
-    uint32_t getPageCount() {
-        return mPageCount;
-    }
+	esp_err_t requestNewPage();
 
-    esp_err_t requestNewPage();
+	esp_err_t fillStats(nvs_stats_t& nvsStats);
 
-    esp_err_t fillStats(nvs_stats_t& nvsStats);
-
-    uint32_t getBaseSector()
-    {
-        return mBaseSector;
-    }
+	uint32_t getBaseSector()
+	{
+		return mBaseSector;
+	}
 
 protected:
-    friend class Iterator;
+	friend class Iterator;
 
-    esp_err_t activatePage();
+	esp_err_t activatePage();
 
-    TPageList mPageList;
-    TPageList mFreePageList;
-    std::unique_ptr<Page[]> mPages;
-    uint32_t mBaseSector;
-    uint32_t mPageCount;
-    uint32_t mSeqNumber;
+	TPageList mPageList;
+	TPageList mFreePageList;
+	std::unique_ptr<Page[]> mPages;
+	uint32_t mBaseSector;
+	uint32_t mPageCount;
+	uint32_t mSeqNumber;
 }; // class PageManager
-
 
 } // namespace nvs

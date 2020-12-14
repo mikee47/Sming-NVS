@@ -18,38 +18,41 @@
 #include "Storage.hpp"
 #include "Partition.hpp"
 
-namespace nvs {
-
-class PartitionManager {
+namespace nvs
+{
+class PartitionManager
+{
 public:
-    virtual ~PartitionManager() { }
+	virtual ~PartitionManager()
+	{
+	}
 
-    esp_err_t init_partition(const char *partition_label);
+	esp_err_t init_partition(const char* partition_label);
 
-    esp_err_t init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount);
+	esp_err_t init_custom(Partition* partition, uint32_t baseSector, uint32_t sectorCount);
 
 #ifdef CONFIG_NVS_ENCRYPTION
-    esp_err_t secure_init_partition(const char *part_name, nvs_sec_cfg_t* cfg);
+	esp_err_t secure_init_partition(const char* part_name, nvs_sec_cfg_t* cfg);
 #endif
 
-    esp_err_t deinit_partition(const char *partition_label);
+	esp_err_t deinit_partition(const char* partition_label);
 
-    Storage* lookup_storage_from_name(const String& name);
+	Storage* lookup_storage_from_name(const String& name);
 
-    esp_err_t open_handle(const char *part_name, const char *ns_name, nvs_open_mode_t open_mode, Handle*& handle);
+	esp_err_t open_handle(const char* part_name, const char* ns_name, nvs_open_mode_t open_mode, Handle*& handle);
 
-    size_t open_handles_size();
+	size_t open_handles_size();
 
 protected:
-    friend Handle;
+	friend Handle;
 
-    esp_err_t close_handle(Handle* handle);
+	esp_err_t close_handle(Handle* handle);
 
-    intrusive_list<Handle> nvs_handles;
-    intrusive_list<nvs::Storage> nvs_storage_list;
-    intrusive_list<nvs::Partition> nvs_partition_list;
+	intrusive_list<Handle> nvs_handles;
+	intrusive_list<nvs::Storage> nvs_storage_list;
+	intrusive_list<nvs::Partition> nvs_partition_list;
 };
 
 extern PartitionManager partitionManager;
 
-} // nvs
+} // namespace nvs

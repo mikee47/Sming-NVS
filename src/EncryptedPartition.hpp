@@ -20,29 +20,30 @@
 #include "include/Nvs/esp_err.h"
 #include "include/Nvs/Partition.hpp"
 
-namespace nvs {
-
+namespace nvs
+{
 #define NVS_KEY_SIZE 32 // AES-256
 
 /**
  * @brief Key for encryption and decryption
  */
 typedef struct {
-    uint8_t eky[NVS_KEY_SIZE]; /*!<  XTS encryption and decryption key*/
-    uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
+	uint8_t eky[NVS_KEY_SIZE]; /*!<  XTS encryption and decryption key*/
+	uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
 } nvs_sec_cfg_t;
 
-class EncryptedPartition : public Partition {
+class EncryptedPartition : public Partition
+{
 public:
-    esp_err_t init(nvs_sec_cfg_t* cfg);
-    esp_err_t read(size_t src_offset, void* dst, size_t size) override;
-    esp_err_t write(size_t dst_offset, const void* src, size_t size) override;
+	esp_err_t init(nvs_sec_cfg_t* cfg);
+	esp_err_t read(size_t src_offset, void* dst, size_t size) override;
+	esp_err_t write(size_t dst_offset, const void* src, size_t size) override;
 
 protected:
 #ifdef ENABLE_MBEDTLS
-    mbedtls_aes_xts_context mEctxt;
-    mbedtls_aes_xts_context mDctxt;
+	mbedtls_aes_xts_context mEctxt;
+	mbedtls_aes_xts_context mDctxt;
 #endif
 };
 
-} // nvs
+} // namespace nvs

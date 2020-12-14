@@ -18,59 +18,57 @@
 #include <cassert>
 #include <type_traits>
 
-template<typename Tenum, size_t Nbits, size_t Nitems>
-class CompressedEnumTable
+template <typename Tenum, size_t Nbits, size_t Nitems> class CompressedEnumTable
 {
 public:
-    uint32_t* data()
-    {
-        return mData;
-    }
+	uint32_t* data()
+	{
+		return mData;
+	}
 
-    const uint32_t* data() const
-    {
-        return mData;
-    }
+	const uint32_t* data() const
+	{
+		return mData;
+	}
 
-    Tenum get(size_t index) const
-    {
-        assert(index >= 0 && index < Nitems);
-        size_t wordIndex = index / ITEMS_PER_WORD;
-        size_t offset = (index % ITEMS_PER_WORD) * Nbits;
+	Tenum get(size_t index) const
+	{
+		assert(index >= 0 && index < Nitems);
+		size_t wordIndex = index / ITEMS_PER_WORD;
+		size_t offset = (index % ITEMS_PER_WORD) * Nbits;
 
-        return static_cast<Tenum>((mData[wordIndex] >> offset) & VALUE_MASK);
-    }
+		return static_cast<Tenum>((mData[wordIndex] >> offset) & VALUE_MASK);
+	}
 
-    void set(size_t index, Tenum val)
-    {
-        assert(index >= 0 && index < Nitems);
-        size_t wordIndex = index / ITEMS_PER_WORD;
-        size_t offset = (index % ITEMS_PER_WORD) * Nbits;
+	void set(size_t index, Tenum val)
+	{
+		assert(index >= 0 && index < Nitems);
+		size_t wordIndex = index / ITEMS_PER_WORD;
+		size_t offset = (index % ITEMS_PER_WORD) * Nbits;
 
-        uint32_t v = static_cast<uint32_t>(val) << offset;
-        mData[wordIndex] = (mData[wordIndex] & ~(VALUE_MASK << offset)) | v;
-    }
+		uint32_t v = static_cast<uint32_t>(val) << offset;
+		mData[wordIndex] = (mData[wordIndex] & ~(VALUE_MASK << offset)) | v;
+	}
 
-    static constexpr size_t getWordIndex(size_t index)
-    {
-        return index / ITEMS_PER_WORD;
-    }
+	static constexpr size_t getWordIndex(size_t index)
+	{
+		return index / ITEMS_PER_WORD;
+	}
 
-    static constexpr size_t byteSize()
-    {
-        return WORD_COUNT * 4;
-    }
+	static constexpr size_t byteSize()
+	{
+		return WORD_COUNT * 4;
+	}
 
-    static constexpr size_t count()
-    {
-        return Nitems;
-    }
-
+	static constexpr size_t count()
+	{
+		return Nitems;
+	}
 
 protected:
-    static_assert(32 % Nbits == 0, "Nbits must divide 32");
-    static const size_t ITEMS_PER_WORD = 32 / Nbits;
-    static const size_t WORD_COUNT = ( Nbits * Nitems + 31 ) / 32;
-    static const uint32_t VALUE_MASK = (1 << Nbits) - 1;
-    uint32_t mData[WORD_COUNT];
+	static_assert(32 % Nbits == 0, "Nbits must divide 32");
+	static const size_t ITEMS_PER_WORD = 32 / Nbits;
+	static const size_t WORD_COUNT = (Nbits * Nitems + 31) / 32;
+	static const uint32_t VALUE_MASK = (1 << Nbits) - 1;
+	uint32_t mData[WORD_COUNT];
 };

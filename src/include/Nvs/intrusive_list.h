@@ -17,239 +17,235 @@
 #include <cassert>
 #include <unordered_map>
 
-template <typename T>
-class intrusive_list;
+template <typename T> class intrusive_list;
 
-template <typename T>
-class intrusive_list_node
+template <typename T> class intrusive_list_node
 {
 protected:
-    friend class intrusive_list<T>;
-    T* mPrev = nullptr;
-    T* mNext = nullptr;
+	friend class intrusive_list<T>;
+	T* mPrev = nullptr;
+	T* mNext = nullptr;
 };
 
-template <typename T>
-class intrusive_list
+template <typename T> class intrusive_list
 {
-    typedef intrusive_list_node<T> TNode;
-    static_assert(std::is_base_of<TNode, T>::value, "");
+	typedef intrusive_list_node<T> TNode;
+	static_assert(std::is_base_of<TNode, T>::value, "");
 
 public:
+	class iterator : public std::iterator<std::forward_iterator_tag, T>
+	{
+	public:
+		iterator() : mPos(nullptr)
+		{
+		}
 
-    class iterator : public std::iterator<std::forward_iterator_tag, T>
-    {
-    public:
+		iterator(T* pos) : mPos(pos)
+		{
+		}
 
-        iterator() : mPos(nullptr) {}
+		iterator operator++(int)
+		{
+			auto result = *this;
+			mPos = mPos->mNext;
+			return result;
+		}
 
-        iterator(T* pos) : mPos(pos) {}
+		iterator operator--(int)
+		{
+			auto result = *this;
+			mPos = mPos->mPrev;
+			return result;
+		}
 
-        iterator operator++(int)
-        {
-            auto result = *this;
-            mPos = mPos->mNext;
-            return result;
-        }
+		iterator& operator++()
+		{
+			mPos = mPos->mNext;
+			return *this;
+		}
 
-        iterator operator--(int)
-        {
-            auto result = *this;
-            mPos = mPos->mPrev;
-            return result;
-        }
+		iterator& operator--()
+		{
+			mPos = mPos->mPrev;
+			return *this;
+		}
 
-        iterator& operator++()
-        {
-            mPos = mPos->mNext;
-            return *this;
-        }
+		bool operator==(const iterator& other) const
+		{
+			return mPos == other.mPos;
+		}
 
-        iterator& operator--()
-        {
-            mPos = mPos->mPrev;
-            return *this;
-        }
+		bool operator!=(const iterator& other) const
+		{
+			return !(*this == other);
+		}
 
+		T& operator*()
+		{
+			return *mPos;
+		}
 
-        bool operator==(const iterator& other) const
-        {
-            return mPos == other.mPos;
-        }
+		const T& operator*() const
+		{
+			return *mPos;
+		}
 
-        bool operator!=(const iterator& other) const
-        {
-            return !(*this == other);
-        }
+		T* operator->()
+		{
+			return mPos;
+		}
 
-        T& operator*()
-        {
-            return *mPos;
-        }
+		const T* operator->() const
+		{
+			return mPos;
+		}
 
-        const T& operator*() const
-        {
-            return *mPos;
-        }
+		operator T*()
+		{
+			return mPos;
+		}
 
-        T* operator->()
-        {
-            return mPos;
-        }
+		operator const T*() const
+		{
+			return mPos;
+		}
 
-        const T* operator->() const
-        {
-            return mPos;
-        }
+	protected:
+		T* mPos;
+	};
 
-        operator T*()
-        {
-            return mPos;
-        }
+	void push_back(T* node)
+	{
+		if(mLast) {
+			mLast->mNext = node;
+		}
+		node->mPrev = mLast;
+		node->mNext = nullptr;
+		mLast = node;
+		if(mFirst == nullptr) {
+			mFirst = node;
+		}
+		++mSize;
+	}
 
-        operator const T*() const
-        {
-            return mPos;
-        }
+	void push_front(T* node)
+	{
+		node->mPrev = nullptr;
+		node->mNext = mFirst;
+		if(mFirst) {
+			mFirst->mPrev = node;
+		}
+		mFirst = node;
+		if(mLast == nullptr) {
+			mLast = node;
+		}
+		++mSize;
+	}
 
+	T& back()
+	{
+		return *mLast;
+	}
 
-    protected:
-        T* mPos;
-    };
+	const T& back() const
+	{
+		return *mLast;
+	}
 
-    void push_back(T* node)
-    {
-        if (mLast) {
-            mLast->mNext = node;
-        }
-        node->mPrev = mLast;
-        node->mNext = nullptr;
-        mLast = node;
-        if (mFirst == nullptr) {
-            mFirst = node;
-        }
-        ++mSize;
-    }
+	T& front()
+	{
+		return *mFirst;
+	}
 
-    void push_front(T* node)
-    {
-        node->mPrev = nullptr;
-        node->mNext = mFirst;
-        if (mFirst) {
-            mFirst->mPrev = node;
-        }
-        mFirst = node;
-        if (mLast == nullptr) {
-            mLast = node;
-        }
-        ++mSize;
-    }
+	const T& front() const
+	{
+		return *mFirst;
+	}
 
-    T& back()
-    {
-        return *mLast;
-    }
+	void pop_front()
+	{
+		erase(mFirst);
+	}
 
-    const T& back() const
-    {
-        return *mLast;
-    }
+	void pop_back()
+	{
+		erase(mLast);
+	}
 
-    T& front()
-    {
-        return *mFirst;
-    }
+	void insert(iterator next, T* node)
+	{
+		if(static_cast<T*>(next) == nullptr) {
+			push_back(node);
+		} else {
+			auto prev = next->mPrev;
+			if(!prev) {
+				push_front(node);
+			} else {
+				prev->mNext = node;
+				next->mPrev = node;
+				node->mNext = next;
+				node->mPrev = &(*prev);
+				++mSize;
+			}
+		}
+	}
 
-    const T& front() const
-    {
-        return *mFirst;
-    }
+	void erase(iterator it)
+	{
+		auto prev = it->mPrev;
+		auto next = it->mNext;
 
-    void pop_front()
-    {
-        erase(mFirst);
-    }
+		if(prev) {
+			prev->mNext = next;
+		} else {
+			mFirst = next;
+		}
+		if(next) {
+			next->mPrev = prev;
+		} else {
+			mLast = prev;
+		}
+		--mSize;
+	}
 
-    void pop_back()
-    {
-        erase(mLast);
-    }
+	iterator begin()
+	{
+		return iterator(mFirst);
+	}
 
-    void insert(iterator next, T* node)
-    {
-        if (static_cast<T*>(next) == nullptr) {
-            push_back(node);
-        } else {
-            auto prev = next->mPrev;
-            if (!prev) {
-                push_front(node);
-            } else {
-                prev->mNext = node;
-                next->mPrev = node;
-                node->mNext = next;
-                node->mPrev = &(*prev);
-                ++mSize;
-            }
-        }
-    }
+	iterator end()
+	{
+		return iterator(nullptr);
+	}
 
-    void erase(iterator it)
-    {
-        auto prev = it->mPrev;
-        auto next = it->mNext;
+	size_t size() const
+	{
+		return mSize;
+	}
 
-        if (prev) {
-            prev->mNext = next;
-        } else {
-            mFirst = next;
-        }
-        if (next) {
-            next->mPrev = prev;
-        } else {
-            mLast = prev;
-        }
-        --mSize;
-    }
+	bool empty() const
+	{
+		return mSize == 0;
+	}
 
-    iterator begin()
-    {
-        return iterator(mFirst);
-    }
+	void clear()
+	{
+		while(mFirst) {
+			erase(mFirst);
+		}
+	}
 
-    iterator end()
-    {
-        return iterator(nullptr);
-    }
-
-    size_t size() const
-    {
-        return mSize;
-    }
-
-    bool empty() const
-    {
-        return mSize == 0;
-    }
-
-    void clear()
-    {
-        while (mFirst) {
-            erase(mFirst);
-        }
-    }
-
-    void clearAndFreeNodes()
-    {
-        while (mFirst) {
-            auto tmp = mFirst;
-            erase(mFirst);
-            delete tmp;
-        }
-    }
-
+	void clearAndFreeNodes()
+	{
+		while(mFirst) {
+			auto tmp = mFirst;
+			erase(mFirst);
+			delete tmp;
+		}
+	}
 
 protected:
-    T* mFirst = nullptr;
-    T* mLast = nullptr;
-    size_t mSize = 0;
+	T* mFirst = nullptr;
+	T* mLast = nullptr;
+	size_t mSize = 0;
 };
