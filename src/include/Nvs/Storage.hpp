@@ -35,6 +35,16 @@ class Storage : public intrusive_list_node<Storage>
 	struct NamespaceEntry : public intrusive_list_node<NamespaceEntry> {
 		char mName[Item::MAX_KEY_LENGTH + 1];
 		uint8_t mIndex;
+
+		bool operator==(uint8_t index) const
+		{
+			return index == mIndex;
+		}
+
+		bool operator==(const char* name) const
+		{
+			return strncmp(mName, name, Item::MAX_KEY_LENGTH) == 0;
+		}
 	};
 
 	struct UsedPageNode : public intrusive_list_node<UsedPageNode> {
@@ -83,6 +93,11 @@ public:
 	}
 
 	esp_err_t init(uint32_t baseSector, uint32_t sectorCount);
+
+	bool operator==(const String& part_name) const
+	{
+		return mPartition == part_name;
+	}
 
 	bool isValid() const;
 

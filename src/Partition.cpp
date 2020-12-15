@@ -19,7 +19,7 @@ namespace nvs
 {
 Partition::~Partition()
 {
-	partitionManager.remove_partition(this);
+	partitionManager.invalidate_partition(this);
 }
 
 } // namespace nvs

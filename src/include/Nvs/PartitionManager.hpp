@@ -62,7 +62,7 @@ protected:
 	friend Partition;
 
 	// Called from Partition destructor
-	void remove_partition(Partition* partition);
+	void invalidate_partition(Partition* partition);
 
 	intrusive_list<nvs::Storage> storage_list;
 	intrusive_list<nvs::Partition> partition_list;

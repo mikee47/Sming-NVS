@@ -390,9 +390,7 @@ esp_err_t Storage::createOrOpenNamespace(const char* nsName, bool canCreate, uin
 	if(mState != State::ACTIVE) {
 		return ESP_ERR_NVS_NOT_INITIALIZED;
 	}
-	auto it = std::find_if(mNamespaces.begin(), mNamespaces.end(), [=](const NamespaceEntry& e) -> bool {
-		return strncmp(nsName, e.mName, sizeof(e.mName) - 1) == 0;
-	});
+	auto it = std::find(mNamespaces.begin(), mNamespaces.end(), nsName);
 	if(it == std::end(mNamespaces)) {
 		if(!canCreate) {
 			return ESP_ERR_NVS_NOT_FOUND;
@@ -423,7 +421,7 @@ esp_err_t Storage::createOrOpenNamespace(const char* nsName, bool canCreate, uin
 
 		entry->mIndex = ns;
 		strncpy(entry->mName, nsName, sizeof(entry->mName) - 1);
-		entry->mName[sizeof(entry->mName) - 1] = 0;
+		entry->mName[sizeof(entry->mName) - 1] = '\0';
 		mNamespaces.push_back(entry);
 
 	} else {
@@ -765,13 +763,8 @@ bool Storage::ItemIterator::next()
 
 String Storage::ItemIterator::ns_name() const
 {
-	for(auto& name : storage.mNamespaces) {
-		if(nsIndex == name.mIndex) {
-			return name.mName;
-		}
-	}
-
-	return nullptr;
+	auto it = std::find(storage.mNamespaces.begin(), storage.mNamespaces.end(), nsIndex);
+	return it ? it->mName : nullptr;
 }
 
 HandlePtr Storage::open_handle(const char* ns_name, OpenMode open_mode)

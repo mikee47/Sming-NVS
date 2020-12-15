@@ -166,11 +166,9 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 	storage_list.erase(storage);
 	delete storage;
 
-	for(auto it = partition_list.begin(); it != partition_list.end(); ++it) {
-		if(it->name() == partition_label) {
-			delete static_cast<Partition*>(it);
-			break;
-		}
+	auto it = find(partition_list.begin(), partition_list.end(), partition_label);
+	if(it) {
+		delete static_cast<Partition*>(it);
 	}
 
 	mLastError = ESP_OK;
@@ -189,15 +187,12 @@ HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, Ope
 	return handle;
 }
 
-void PartitionManager::remove_partition(Partition* partition)
+void PartitionManager::invalidate_partition(Partition* partition)
 {
 	assert(partition != nullptr);
-
-	for(auto it = partition_list.begin(); it != partition_list.end(); ++it) {
-		if(partition == it) {
-			partition_list.erase(it);
-			break;
-		}
+	auto it = find(partition_list.begin(), partition_list.end(), *partition);
+	if(it) {
+		partition_list.erase(it);
 	}
 }
 
@@ -213,12 +208,9 @@ Storage* PartitionManager::lookup_storage(const String& part_name)
 		return nullptr;
 	}
 
-	auto it = find_if(begin(storage_list), end(storage_list),
-					  [=](Storage& e) -> bool { return e.partition().name() == part_name; });
-
-	Storage* storage = it;
-	mLastError = (storage == nullptr) ? ESP_ERR_NOT_FOUND : ESP_OK;
-	return storage;
+	auto it = find(begin(storage_list), end(storage_list), part_name);
+	mLastError = it ? ESP_OK : ESP_ERR_NOT_FOUND;
+	return static_cast<Storage*>(it);
 }
 
 } // namespace nvs
