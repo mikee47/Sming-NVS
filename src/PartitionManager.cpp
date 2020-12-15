@@ -91,20 +91,14 @@ bool PartitionManager::init_partition(const char* partition_label)
 		return false;
 	}
 
-	if(!init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE)) {
-		return false;
-	}
-
-	partition_list.push_back(p.release());
-
-	return true;
+	return init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE);
 }
 
 bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount)
 {
 	auto storage = lookup_storage(partition->name());
 	if(storage == nullptr) {
-		storage = new(std::nothrow) Storage(*partition);
+		storage = new(std::nothrow) Storage(partition);
 
 		if(storage == nullptr) {
 			mLastError = ESP_ERR_NO_MEM;
@@ -147,12 +141,7 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return false;
 	}
 
-	if(!init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE)) {
-		return false;
-	}
-
-	partition_list.push_back(p.release());
-	return true;
+	return init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE);
 }
 #endif // ENABLE_NVS_ENCRYPTION
 
@@ -165,12 +154,6 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 
 	storage_list.erase(storage);
 	delete storage;
-
-	auto it = find(partition_list.begin(), partition_list.end(), partition_label);
-	if(it) {
-		delete static_cast<Partition*>(it);
-	}
-
 	mLastError = ESP_OK;
 	return true;
 }
@@ -185,15 +168,6 @@ HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, Ope
 	auto handle = storage->open_handle(ns_name, open_mode);
 	mLastError = storage->lastError();
 	return handle;
-}
-
-void PartitionManager::invalidate_partition(Partition* partition)
-{
-	assert(partition != nullptr);
-	auto it = find(partition_list.begin(), partition_list.end(), *partition);
-	if(it) {
-		partition_list.erase(it);
-	}
 }
 
 Storage* PartitionManager::lookup_storage(const String& part_name)

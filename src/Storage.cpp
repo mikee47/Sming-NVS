@@ -20,17 +20,6 @@
 
 namespace nvs
 {
-Storage::~Storage()
-{
-	invalidate_handles();
-	clearNamespaces();
-}
-
-void Storage::clearNamespaces()
-{
-	mNamespaces.clearAndFreeNodes();
-}
-
 esp_err_t Storage::populateBlobIndices(TBlobIndexList& blobIdxList)
 {
 	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
@@ -88,14 +77,16 @@ void Storage::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
 
 esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
 {
-	auto err = mPageManager.load(mPartition, baseSector, sectorCount);
+	assert(mHandleCount == 0);
+
+	auto err = mPageManager.load(*mPartition, baseSector, sectorCount);
 	if(err != ESP_OK) {
 		mState = State::INVALID;
 		return err;
 	}
 
 	// load namespaces list
-	clearNamespaces();
+	mNamespaces.clearAndFreeNodes();
 	std::fill_n(mNamespaceUsage.data(), mNamespaceUsage.byteSize() / 4, 0);
 	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
 		Page& p = *it;
@@ -785,32 +776,11 @@ HandlePtr Storage::open_handle(const char* ns_name, OpenMode open_mode)
 	if(handle == nullptr) {
 		mLastError = ESP_ERR_NO_MEM;
 	} else {
-		handle_list.push_back(handle);
+		++mHandleCount;
 		mLastError = ESP_OK;
 	}
 
 	return HandlePtr(handle);
-}
-
-void Storage::invalidate_handles()
-{
-	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
-		it->invalidate();
-		handle_list.erase(it);
-	}
-}
-
-bool Storage::invalidate_handle(Handle* handle)
-{
-	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
-		if(*it == *handle) {
-			it->invalidate();
-			handle_list.erase(it);
-			return true;
-		}
-	}
-
-	return false;
 }
 
 } // namespace nvs

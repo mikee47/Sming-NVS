@@ -16,13 +16,7 @@
 #include "include/Nvs/Handle.hpp"
 #include "include/Nvs/PartitionManager.hpp"
 
-#define CHECK_VALID()                                                                                                  \
-	if(mStorage == nullptr) {                                                                                          \
-		return ESP_ERR_NVS_INVALID_HANDLE;                                                                             \
-	}
-
 #define CHECK_WRITE()                                                                                                  \
-	CHECK_VALID()                                                                                                      \
 	if(mReadOnly) {                                                                                                    \
 		return ESP_ERR_NVS_READ_ONLY;                                                                                  \
 	}
@@ -31,79 +25,69 @@ namespace nvs
 {
 Handle::~Handle()
 {
-	if(mStorage != nullptr) {
-		mStorage->invalidate_handle(this);
-	}
+	mStorage.handle_destroyed();
 }
 
 esp_err_t Handle::set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
 {
 	CHECK_WRITE()
-	return mStorage->writeItem(mNsIndex, datatype, key, data, dataSize);
+	return mStorage.writeItem(mNsIndex, datatype, key, data, dataSize);
 }
 
 esp_err_t Handle::get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
 {
-	CHECK_VALID()
-	return mStorage->readItem(mNsIndex, datatype, key, data, dataSize);
+	return mStorage.readItem(mNsIndex, datatype, key, data, dataSize);
 }
 
 esp_err_t Handle::set_string(const char* key, const char* str)
 {
 	CHECK_WRITE()
-	return mStorage->writeItem(mNsIndex, nvs::ItemType::SZ, key, str, strlen(str) + 1);
+	return mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, str, strlen(str) + 1);
 }
 
 esp_err_t Handle::set_blob(const char* key, const void* blob, size_t len)
 {
 	CHECK_WRITE()
-	return mStorage->writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
+	return mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
 }
 
 esp_err_t Handle::get_string(const char* key, char* out_str, size_t len)
 {
-	CHECK_VALID()
-	return mStorage->readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
+	return mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
 }
 
 esp_err_t Handle::get_blob(const char* key, void* out_blob, size_t len)
 {
-	CHECK_VALID()
-	return mStorage->readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
+	return mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
 }
 
 esp_err_t Handle::get_item_size(ItemType datatype, const char* key, size_t& size)
 {
-	CHECK_VALID()
-	return mStorage->getItemDataSize(mNsIndex, datatype, key, size);
+	return mStorage.getItemDataSize(mNsIndex, datatype, key, size);
 }
 
 esp_err_t Handle::erase_item(const char* key)
 {
 	CHECK_WRITE()
-	return mStorage->eraseItem(mNsIndex, key);
+	return mStorage.eraseItem(mNsIndex, key);
 }
 
 esp_err_t Handle::erase_all()
 {
 	CHECK_WRITE()
-	return mStorage->eraseNamespace(mNsIndex);
+	return mStorage.eraseNamespace(mNsIndex);
 }
 
 esp_err_t Handle::commit()
 {
-	CHECK_VALID()
 	return ESP_OK;
 }
 
 esp_err_t Handle::get_used_entry_count(size_t& used_entries)
 {
 	used_entries = 0;
-
-	CHECK_VALID()
-
 	size_t used_entry_count;
-	esp_err_t err = mStorage->calcEntriesInNamespace(mNsIndex, used_entry_count);
+	esp_err_t err = mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count);
 	if(err == ESP_OK) {
 		used_entries = used_entry_count;
 	}
@@ -113,20 +97,17 @@ esp_err_t Handle::get_used_entry_count(size_t& used_entries)
 
 void Handle::debugDump()
 {
-	assert(mStorage != nullptr);
-	return mStorage->debugDump();
+	return mStorage.debugDump();
 }
 
 esp_err_t Handle::fillStats(nvs_stats_t& nvsStats)
 {
-	CHECK_VALID()
-	return mStorage->fillStats(nvsStats);
+	return mStorage.fillStats(nvsStats);
 }
 
 esp_err_t Handle::calcEntriesInNamespace(size_t& usedEntries)
 {
-	CHECK_VALID()
-	return mStorage->calcEntriesInNamespace(mNsIndex, usedEntries);
+	return mStorage.calcEntriesInNamespace(mNsIndex, usedEntries);
 }
 
 } // namespace nvs

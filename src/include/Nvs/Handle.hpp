@@ -20,7 +20,7 @@
 
 #include "nvs.h"
 #include "Item.hpp"
-#include "intrusive_list.h"
+#include "Storage.hpp"
 
 class ItemIterator;
 
@@ -33,11 +33,10 @@ class Storage;
  *
  * @note The scope of this handle is the namespace of a particular partition. Outside that scope, nvs entries can't be accessed/altered.
  */
-class Handle : public intrusive_list_node<Handle>
+class Handle
 {
 public:
-	Handle(bool readOnly, uint8_t nsIndex, Storage& storage)
-		: mStorage(&storage), mNsIndex(nsIndex), mReadOnly(readOnly)
+	Handle(bool readOnly, uint8_t nsIndex, Storage& storage) : mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly)
 	{
 	}
 
@@ -200,7 +199,7 @@ public:
 
 	esp_err_t calcEntriesInNamespace(size_t& usedEntries);
 
-	Storage* storage()
+	Storage& storage()
 	{
 		return mStorage;
 	}
@@ -217,19 +216,10 @@ public:
 private:
 	friend class Storage;
 
-	/*
-	 * Called by storage destructor
-	 */
-	void invalidate()
-	{
-		mStorage = nullptr;
-	}
-
 	/**
-     * The underlying storage's object.
-     * Set in constructor, cleared by invalidate()
+     * The underlying storage's object
      */
-	Storage* mStorage{};
+	Storage& mStorage;
 
 	/**
      * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).

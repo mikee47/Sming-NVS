@@ -33,7 +33,7 @@ public:
 	PartitionPtr lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
 #endif
 
-	bool init_partition(const char* partition_label);
+	bool init_partition(const char* partition_label = NVS_DEFAULT_PART_NAME);
 
 	bool init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount);
 
@@ -41,7 +41,7 @@ public:
 	bool secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg);
 #endif
 
-	bool deinit_partition(const char* partition_label);
+	bool deinit_partition(const char* partition_label = NVS_DEFAULT_PART_NAME);
 
 	Storage* lookup_storage(const String& part_name);
 
@@ -58,14 +58,7 @@ public:
 	}
 
 protected:
-	friend Handle;
-	friend Partition;
-
-	// Called from Partition destructor
-	void invalidate_partition(Partition* partition);
-
 	intrusive_list<nvs::Storage> storage_list;
-	intrusive_list<nvs::Partition> partition_list;
 	esp_err_t mLastError{ESP_OK};
 };
 

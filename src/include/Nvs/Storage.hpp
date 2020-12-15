@@ -86,17 +86,21 @@ class Storage : public intrusive_list_node<Storage>
 	};
 
 public:
-	~Storage();
-
-	Storage(Partition& partition) : mPartition(partition)
+	Storage(PartitionPtr& partition) : mPartition(std::move(partition))
 	{
+	}
+
+	~Storage()
+	{
+		assert(mHandleCount == 0);
+		mNamespaces.clearAndFreeNodes();
 	}
 
 	esp_err_t init(uint32_t baseSector, uint32_t sectorCount);
 
 	bool operator==(const String& part_name) const
 	{
-		return mPartition == part_name;
+		return *mPartition == part_name;
 	}
 
 	bool isValid() const;
@@ -132,7 +136,7 @@ public:
 
 	const ::Storage::Partition& partition() const
 	{
-		return mPartition;
+		return *mPartition;
 	}
 
 	uint32_t getBaseSector()
@@ -167,18 +171,25 @@ public:
 		return mLastError;
 	}
 
-	void invalidate_handles();
+	uint16_t handleCount() const
+	{
+		return mHandleCount;
+	}
 
 private:
 	friend Handle;
 	friend ItemIterator;
 
+	void handle_destroyed()
+	{
+		assert(mHandleCount > 0);
+		--mHandleCount;
+	}
+
 	Page& getCurrentPage()
 	{
 		return mPageManager.back();
 	}
-
-	void clearNamespaces();
 
 	esp_err_t populateBlobIndices(TBlobIndexList&);
 
@@ -187,12 +198,9 @@ private:
 	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page*& page, Item& item,
 					   uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-	// Called from Handle destructor
-	bool invalidate_handle(Handle* handle);
-
-	Partition& mPartition;
-	intrusive_list<Handle> handle_list;
-	size_t mPageCount;
+	PartitionPtr mPartition;
+	uint16_t mHandleCount{0};
+	uint16_t mPageCount{0};
 	PageManager mPageManager;
 	intrusive_list<NamespaceEntry> mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
