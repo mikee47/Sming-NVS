@@ -30,7 +30,8 @@ class Storage;
 
 #define CHECK_WRITE()                                                                                                  \
 	if(mReadOnly) {                                                                                                    \
-		return ESP_ERR_NVS_READ_ONLY;                                                                                  \
+		mLastError = ESP_ERR_NVS_READ_ONLY;                                                                            \
+		return false;                                                                                                  \
 	}
 
 /**
@@ -74,15 +75,15 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-	template <typename T> esp_err_t set_item(const char* key, T value)
+	template <typename T> bool set_item(const char* key, T value)
 	{
 		return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	esp_err_t set_string(const char* key, const char* value)
+	bool set_string(const char* key, const char* value)
 	{
 		CHECK_WRITE()
-		return mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value, strlen(value) + 1);
+		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value, strlen(value) + 1));
 	}
 
 	/**
@@ -105,7 +106,7 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	template <typename T> esp_err_t get_item(const char* key, T& value)
+	template <typename T> bool get_item(const char* key, T& value)
 	{
 		return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 	}
@@ -136,10 +137,10 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-	esp_err_t set_blob(const char* key, const void* blob, size_t len)
+	bool set_blob(const char* key, const void* blob, size_t len)
 	{
 		CHECK_WRITE()
-		return mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
+		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
 	}
 
 	/**
@@ -170,14 +171,14 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	esp_err_t get_string(const char* key, char* out_str, size_t len)
+	bool get_string(const char* key, char* out_str, size_t len)
 	{
-		return mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
+		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
 	}
 
-	esp_err_t get_blob(const char* key, void* out_blob, size_t len)
+	bool get_blob(const char* key, void* out_blob, size_t len)
 	{
-		return mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
+		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
 	}
 
 	/**
@@ -185,18 +186,18 @@ public:
      *
      * For strings, this size includes the zero terminator.
      */
-	esp_err_t get_item_size(ItemType datatype, const char* key, size_t& size)
+	bool get_item_size(ItemType datatype, const char* key, size_t& size)
 	{
-		return mStorage.getItemDataSize(mNsIndex, datatype, key, size);
+		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, size));
 	}
 
 	/**
      * @brief Erases an entry.
      */
-	esp_err_t erase_item(const char* key)
+	bool erase_item(const char* key)
 	{
 		CHECK_WRITE()
-		return mStorage.eraseItem(mNsIndex, key);
+		return checkStorage(mStorage.eraseItem(mNsIndex, key));
 	}
 
 	/**
@@ -204,18 +205,19 @@ public:
      *
      * @not If you want to erase the whole nvs flash (partition), refer to \ref
      */
-	esp_err_t erase_all()
+	bool erase_all()
 	{
 		CHECK_WRITE()
-		return mStorage.eraseNamespace(mNsIndex);
+		return checkStorage(mStorage.eraseNamespace(mNsIndex));
 	}
 
 	/**
      * Commits all changes done through this handle so far.
      */
-	esp_err_t commit()
+	bool commit()
 	{
-		return ESP_OK;
+		mLastError = ESP_OK;
+		return true;
 	}
 
 	/**
@@ -233,33 +235,38 @@ public:
      *             - Other error codes from the underlying storage driver.
      *               Return param used_entries will be filled 0.
      */
-	esp_err_t get_used_entry_count(size_t& usedEntries)
+	bool get_used_entry_count(size_t& usedEntries)
 	{
 		usedEntries = 0;
 		size_t used_entry_count;
-		esp_err_t err = mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count);
-		if(err == ESP_OK) {
+		if(mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count)) {
 			usedEntries = used_entry_count;
+			mLastError = ESP_OK;
+			return true;
 		}
 
-		return err;
+		mLastError = mStorage.lastError();
+		return false;
 	}
 
-	esp_err_t getItemDataSize(ItemType datatype, const char* key, size_t& dataSize);
+	bool getItemDataSize(ItemType dataType, const char* key, size_t& dataSize)
+	{
+		return checkStorage(mStorage.getItemDataSize(mNsIndex, dataType, key, dataSize));
+	}
 
 	void debugDump()
 	{
-		return mStorage.debugDump();
+		mStorage.debugDump();
 	}
 
-	esp_err_t fillStats(nvs_stats_t& nvsStats)
+	bool fillStats(nvs_stats_t& nvsStats)
 	{
-		return mStorage.fillStats(nvsStats);
+		return checkStorage(mStorage.fillStats(nvsStats));
 	}
 
-	esp_err_t calcEntriesInNamespace(size_t& usedEntries)
+	bool calcEntriesInNamespace(size_t& usedEntries)
 	{
-		return mStorage.calcEntriesInNamespace(mNsIndex, usedEntries);
+		return checkStorage(mStorage.calcEntriesInNamespace(mNsIndex, usedEntries));
 	}
 
 	Storage& storage()
@@ -272,19 +279,30 @@ public:
 		return this == &other;
 	}
 
-	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
+	bool set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
 	{
 		CHECK_WRITE()
-		return mStorage.writeItem(mNsIndex, datatype, key, data, dataSize);
+		return checkStorage(mStorage.writeItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
-	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
+	bool get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
 	{
-		return mStorage.readItem(mNsIndex, datatype, key, data, dataSize);
+		return checkStorage(mStorage.readItem(mNsIndex, datatype, key, data, dataSize));
+	}
+
+	esp_err_t lastError() const
+	{
+		return mLastError;
 	}
 
 private:
 	friend class Storage;
+
+	bool checkStorage(bool res)
+	{
+		mLastError = res ? ESP_OK : mContainer.lastError();
+		return res;
+	}
 
 	/**
      * The underlying storage's object
@@ -300,6 +318,8 @@ private:
      * Whether this handle is marked as read-only or read-write.
      */
 	bool mReadOnly;
+
+	esp_err_t mLastError{ESP_OK};
 };
 
 using HandlePtr = std::unique_ptr<Handle>;

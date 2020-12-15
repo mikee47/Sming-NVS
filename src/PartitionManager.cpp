@@ -102,22 +102,30 @@ bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector,
 
 		if(storage == nullptr) {
 			mLastError = ESP_ERR_NO_MEM;
-		} else {
-			mLastError = storage->init(baseSector, sectorCount);
-			if(mLastError == ESP_OK) {
-				storage_list.push_back(storage);
-			} else {
-				delete storage;
-			}
+			return false;
 		}
-	} else {
-		// Storage was already initialized, don't need partition copy
-		partition.reset();
 
-		mLastError = storage->init(baseSector, sectorCount);
+		if(storage->init(baseSector, sectorCount)) {
+			storage_list.push_back(storage);
+			mLastError = ESP_OK;
+			return true;
+		}
+
+		mLastError = storage->lastError();
+		delete storage;
+		return false;
 	}
 
-	return mLastError == ESP_OK;
+	// Storage was already initialized, don't need partition copy
+	partition.reset();
+
+	if(storage->init(baseSector, sectorCount)) {
+		mLastError = ESP_OK;
+		return true;
+	}
+
+	mLastError = storage->lastError();
+	return false;
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
