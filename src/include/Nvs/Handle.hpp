@@ -37,7 +37,7 @@ class Handle : public intrusive_list_node<Handle>
 {
 public:
 	Handle(bool readOnly, uint8_t nsIndex, Storage& storage)
-		: mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly), valid(true)
+		: mStorage(&storage), mNsIndex(nsIndex), mReadOnly(readOnly)
 	{
 	}
 
@@ -200,7 +200,7 @@ public:
 
 	esp_err_t calcEntriesInNamespace(size_t& usedEntries);
 
-	Storage& storage()
+	Storage* storage()
 	{
 		return mStorage;
 	}
@@ -217,10 +217,19 @@ public:
 private:
 	friend class Storage;
 
+	/*
+	 * Called by storage destructor
+	 */
+	void invalidate()
+	{
+		mStorage = nullptr;
+	}
+
 	/**
      * The underlying storage's object.
+     * Set in constructor, cleared by invalidate()
      */
-	Storage& mStorage;
+	Storage* mStorage{};
 
 	/**
      * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).
@@ -231,12 +240,6 @@ private:
      * Whether this handle is marked as read-only or read-write.
      */
 	bool mReadOnly;
-
-	/**
-     * Indicates the validity of this handle.
-     * Upon opening, a handle is valid. It becomes invalid if the underlying storage is de-initialized.
-     */
-	bool valid;
 };
 
 using HandlePtr = std::unique_ptr<Handle>;

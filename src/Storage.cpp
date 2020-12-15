@@ -802,16 +802,16 @@ HandlePtr Storage::open_handle(const char* ns_name, OpenMode open_mode)
 void Storage::invalidate_handles()
 {
 	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
-		it->valid = false;
+		it->invalidate();
 		handle_list.erase(it);
 	}
 }
 
-bool Storage::close_handle(Handle* handle)
+bool Storage::invalidate_handle(Handle* handle)
 {
 	for(auto it = handle_list.begin(); it != handle_list.end(); ++it) {
 		if(*it == *handle) {
-			it->valid = false;
+			it->invalidate();
 			handle_list.erase(it);
 			return true;
 		}

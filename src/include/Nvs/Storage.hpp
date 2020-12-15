@@ -173,7 +173,7 @@ private:
 					   uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
 	// Called from Handle destructor
-	bool close_handle(Handle* handle);
+	bool invalidate_handle(Handle* handle);
 
 	Partition& mPartition;
 	intrusive_list<Handle> handle_list;
