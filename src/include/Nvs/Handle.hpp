@@ -61,7 +61,7 @@ public:
      *                     For strings, the maximum length (including null character) is
      *                     4000 bytes.
      *                     Note that enums loose their type information when stored in NVS. Ensure that the correct
-     *                     enum type is used during retrieval with \ref get_item!
+     *                     enum type is used during retrieval with \ref getItem!
      *
      * @return
      *             - ESP_OK if value was set successfully
@@ -75,12 +75,12 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-	template <typename T> bool set_item(const String& key, T value)
+	template <typename T> bool setItem(const String& key, T value)
 	{
-		return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+		return setTypedItem(itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	bool set_string(const String& key, const String& value)
+	bool setString(const String& key, const String& value)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value.c_str(), value.length() + 1));
@@ -98,7 +98,7 @@ public:
      * @param[in]     key        Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
      * @param         value      The output value. All integral types which are declared in ItemType as well as enums
      *                           are allowed. Note however that enums lost their type information when stored in NVS.
-     *                           Ensure that the correct enum type is used during retrieval with \ref get_item!
+     *                           Ensure that the correct enum type is used during retrieval with \ref getItem!
      *
      * @return
      *             - ESP_OK if the value was retrieved successfully
@@ -106,9 +106,9 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	template <typename T> bool get_item(const String& key, T& value)
+	template <typename T> bool getItem(const String& key, T& value)
 	{
-		return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+		return getTypedItem(itemTypeOf(value), key, &value, sizeof(value));
 	}
 
 	/**
@@ -137,7 +137,7 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-	bool set_blob(const String& key, const void* blob, size_t len)
+	bool setBlob(const String& key, const void* blob, size_t len)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
@@ -156,7 +156,7 @@ public:
      * of the given type.
      *
      * It is suggested that nvs_get/set_str is used for zero-terminated C strings, and
-     * nvs_get/set_blob used for arbitrary data structures.
+     * get/setBlob used for arbitrary data structures.
      *
      * @param[in]     key        Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
      * @param         out_str/   Pointer to the output value.
@@ -171,12 +171,12 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	bool get_string(const String& key, char* out_str, size_t len)
+	bool getString(const String& key, char* out_str, size_t len)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
 	}
 
-	bool get_blob(const String& key, void* out_blob, size_t len)
+	bool getBlob(const String& key, void* out_blob, size_t len)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
 	}
@@ -186,7 +186,7 @@ public:
      *
      * For strings, this size includes the zero terminator.
      */
-	bool get_item_size(ItemType datatype, const String& key, size_t& size)
+	bool getItemSize(ItemType datatype, const String& key, size_t& size)
 	{
 		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, size));
 	}
@@ -194,7 +194,7 @@ public:
 	/**
      * @brief Erases an entry.
      */
-	bool erase_item(const String& key)
+	bool eraseItem(const String& key)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.eraseItem(mNsIndex, key));
@@ -205,7 +205,7 @@ public:
      *
      * @not If you want to erase the whole nvs flash (partition), refer to \ref
      */
-	bool erase_all()
+	bool eraseAll()
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.eraseNamespace(mNsIndex));
@@ -235,7 +235,7 @@ public:
      *             - Other error codes from the underlying storage driver.
      *               Return param used_entries will be filled 0.
      */
-	bool get_used_entry_count(size_t& usedEntries)
+	bool getUsedEntryCount(size_t& usedEntries)
 	{
 		usedEntries = 0;
 		size_t used_entry_count;
@@ -279,13 +279,13 @@ public:
 		return this == &other;
 	}
 
-	bool set_typed_item(ItemType datatype, const String& key, const void* data, size_t dataSize)
+	bool setTypedItem(ItemType datatype, const String& key, const void* data, size_t dataSize)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.writeItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
-	bool get_typed_item(ItemType datatype, const String& key, void* data, size_t dataSize)
+	bool getTypedItem(ItemType datatype, const String& key, void* data, size_t dataSize)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, datatype, key, data, dataSize));
 	}
