@@ -91,10 +91,10 @@ bool PartitionManager::init_partition(const char* partition_label)
 		return false;
 	}
 
-	return init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE);
+	return init_partition(p);
 }
 
-bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount)
+bool PartitionManager::init_partition(PartitionPtr& partition)
 {
 	auto storage = lookup_storage(partition->name());
 	if(storage == nullptr) {
@@ -105,7 +105,7 @@ bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector,
 			return false;
 		}
 
-		if(storage->init(baseSector, sectorCount)) {
+		if(storage->init()) {
 			storage_list.push_back(storage);
 			mLastError = ESP_OK;
 			return true;
@@ -119,7 +119,7 @@ bool PartitionManager::init_custom(PartitionPtr& partition, uint32_t baseSector,
 	// Storage was already initialized, don't need partition copy
 	partition.reset();
 
-	if(storage->init(baseSector, sectorCount)) {
+	if(storage->init()) {
 		mLastError = ESP_OK;
 		return true;
 	}
@@ -149,7 +149,7 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 		return false;
 	}
 
-	return init_custom(p, 0, p->size() / SPI_FLASH_SEC_SIZE);
+	return init_partition(p);
 }
 #endif // ENABLE_NVS_ENCRYPTION
 

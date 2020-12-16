@@ -32,7 +32,7 @@ public:
 	{
 	}
 
-	esp_err_t load(Partition& partition, uint32_t baseSector, uint32_t sectorCount);
+	esp_err_t load(Partition& partition);
 
 	TPageListIterator begin()
 	{
@@ -58,11 +58,6 @@ public:
 
 	esp_err_t fillStats(nvs_stats_t& nvsStats);
 
-	uint32_t getBaseSector()
-	{
-		return mBaseSector;
-	}
-
 protected:
 	friend class Iterator;
 
@@ -71,7 +66,6 @@ protected:
 	TPageList mPageList;
 	TPageList mFreePageList;
 	std::unique_ptr<Page[]> mPages;
-	uint32_t mBaseSector;
 	uint32_t mPageCount;
 	uint32_t mSeqNumber;
 }; // class PageManager

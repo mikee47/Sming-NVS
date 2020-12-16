@@ -15,19 +15,18 @@
 
 namespace nvs
 {
-esp_err_t PageManager::load(Partition& partition, uint32_t baseSector, uint32_t sectorCount)
+esp_err_t PageManager::load(Partition& partition)
 {
-	mBaseSector = baseSector;
-	mPageCount = sectorCount;
+	mPageCount = partition.size() / Page::SEC_SIZE;
 	mPageList.clear();
 	mFreePageList.clear();
-	mPages.reset(new(nothrow) Page[sectorCount]);
+	mPages.reset(new(nothrow) Page[mPageCount]);
 
 	if(!mPages)
 		return ESP_ERR_NO_MEM;
 
-	for(uint32_t i = 0; i < sectorCount; ++i) {
-		auto err = mPages[i].load(partition, baseSector + i);
+	for(uint32_t i = 0; i < mPageCount; ++i) {
+		auto err = mPages[i].load(partition, i);
 		if(err != ESP_OK) {
 			return err;
 		}

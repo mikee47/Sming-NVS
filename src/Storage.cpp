@@ -79,11 +79,16 @@ void Storage::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
 	}
 }
 
-bool Storage::init(uint32_t baseSector, uint32_t sectorCount)
+bool Storage::init()
 {
-	assert(mHandleCount == 0);
+	if(mHandleCount != 0) {
+		debug_e("Handles in use, cannot init");
+		assert(false);
+		mLastError = ESP_ERR_NVS_INVALID_STATE;
+		return false;
+	}
 
-	mLastError = mPageManager.load(*mPartition, baseSector, sectorCount);
+	mLastError = mPageManager.load(*mPartition);
 	if(mLastError != ESP_OK) {
 		mState = State::INVALID;
 		return false;

@@ -98,7 +98,7 @@ public:
 		mNamespaces.clearAndFreeNodes();
 	}
 
-	bool init(uint32_t baseSector, uint32_t sectorCount);
+	bool init();
 
 	bool operator==(const String& part_name) const
 	{
@@ -142,11 +142,6 @@ public:
 	const ::Storage::Partition& partition() const
 	{
 		return *mPartition;
-	}
-
-	uint32_t getBaseSector()
-	{
-		return mPageManager.getBaseSector();
 	}
 
 	bool writeMultiPageBlob(uint8_t nsIndex, const char* key, const void* data, size_t dataSize, VerOffset chunkStart);

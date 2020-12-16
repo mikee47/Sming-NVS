@@ -35,7 +35,7 @@ public:
 
 	bool init_partition(const char* partition_label = NVS_DEFAULT_PART_NAME);
 
-	bool init_custom(PartitionPtr& partition, uint32_t baseSector, uint32_t sectorCount);
+	bool init_partition(PartitionPtr& partition);
 
 #ifdef ENABLE_NVS_ENCRYPTION
 	bool secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg);
