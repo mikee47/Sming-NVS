@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -26,30 +26,30 @@ namespace nvs
 class PartitionManager
 {
 public:
-	::Storage::Partition findPartition(const String& label);
+	::Storage::Partition findPartition(const String& name);
 
-	PartitionPtr lookupPartition(const String& label);
+	PartitionPtr lookupPartition(const String& name);
 #ifdef ENABLE_NVS_ENCRYPTION
-	PartitionPtr lookupEncryptedPartition(const String& label, const nvs_sec_cfg_t& cfg);
+	PartitionPtr lookupEncryptedPartition(const String& name, const nvs_sec_cfg_t& cfg);
 #endif
 
-	bool initPartition(const String& partition_label = NVS_DEFAULT_PART_NAME);
+	bool initPartition(const String& name = NVS_DEFAULT_PART_NAME);
 
 	bool initPartition(PartitionPtr& partition);
 
 #ifdef ENABLE_NVS_ENCRYPTION
-	bool secure_init_partition(const String& part_name, const nvs_sec_cfg_t* cfg);
+	bool secureInitPartition(const String& name, const nvs_sec_cfg_t* cfg);
 #endif
 
-	bool deinitPartition(const String& partition_label = NVS_DEFAULT_PART_NAME);
+	bool deinitPartition(const String& name = NVS_DEFAULT_PART_NAME);
 
-	Storage* lookupStorage(const String& part_name);
+	Storage* lookupStorage(const String& name);
 
-	HandlePtr open(const String& part_name, const String& ns_name, OpenMode open_mode);
+	HandlePtr openHandle(const String& partName, const String& nsName, OpenMode openMode);
 
-	HandlePtr open(const String& ns_name, OpenMode open_mode)
+	HandlePtr openHandle(const String& nsName, OpenMode openMode)
 	{
-		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
+		return openHandle(NVS_DEFAULT_PART_NAME, nsName, openMode);
 	}
 
 	esp_err_t lastError() const
@@ -63,5 +63,20 @@ protected:
 };
 
 extern PartitionManager partitionManager;
+
+inline HandlePtr openHandle(const String& partName, const String& nsName, OpenMode openMode)
+{
+	return partitionManager.openHandle(partName, nsName, openMode);
+}
+
+inline HandlePtr openHandle(const String& nsName, OpenMode openMode)
+{
+	return partitionManager.openHandle(nsName, openMode);
+}
+
+inline bool initPartition(const String& name)
+{
+	return partitionManager.initPartition(name);
+}
 
 } // namespace nvs

@@ -62,7 +62,7 @@ class Storage : public intrusive_list_node<Storage>
 	class ItemIterator : public Item
 	{
 	public:
-		ItemIterator(Storage& storage, const String& ns_name, ItemType itemType);
+		ItemIterator(Storage& storage, const String& nsName, ItemType itemType);
 
 		void reset();
 
@@ -73,7 +73,7 @@ class Storage : public intrusive_list_node<Storage>
 			return page && !done;
 		}
 
-		String ns_name() const;
+		String nsName() const;
 
 	private:
 		Storage& storage;
@@ -109,7 +109,7 @@ public:
 
 	bool createOrOpenNamespace(const String& nsName, bool canCreate, uint8_t& nsIndex);
 
-	HandlePtr open_handle(const String& ns_name, OpenMode open_mode);
+	HandlePtr openHandle(const String& nsName, OpenMode openMode);
 
 	bool writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize);
 

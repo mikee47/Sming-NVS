@@ -113,10 +113,10 @@ typedef enum {
  * @note Info about storage space NVS.
  */
 typedef struct {
-	size_t used_entries;	/**< Amount of used entries. */
-	size_t free_entries;	/**< Amount of free entries. */
-	size_t total_entries;   /**< Amount all available entries. */
-	size_t namespace_count; /**< Amount name space. */
+	size_t usedEntries;	/**< Amount of used entries. */
+	size_t freeEntries;	/**< Amount of free entries. */
+	size_t totalEntries;   /**< Amount all available entries. */
+	size_t namespaceCount; /**< Amount name space. */
 } nvs_stats_t;
 
 /**

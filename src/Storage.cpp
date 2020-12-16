@@ -733,7 +733,7 @@ void Storage::debugCheck()
 
 bool Storage::fillStats(nvs_stats_t& nvsStats)
 {
-	nvsStats.namespace_count = mNamespaces.size();
+	nvsStats.namespaceCount = mNamespaces.size();
 	mLastError = mPageManager.fillStats(nvsStats);
 	return mLastError == ESP_OK;
 }
@@ -772,13 +772,13 @@ bool Storage::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 	return true;
 }
 
-Storage::ItemIterator::ItemIterator(Storage& storage, const String& ns_name, ItemType itemType)
+Storage::ItemIterator::ItemIterator(Storage& storage, const String& nsName, ItemType itemType)
 	: storage(storage), itemType(itemType)
 {
 	reset();
 
-	if(ns_name != nullptr) {
-		done = !storage.createOrOpenNamespace(ns_name, false, nsIndex);
+	if(nsName != nullptr) {
+		done = !storage.createOrOpenNamespace(nsName, false, nsIndex);
 	}
 }
 
@@ -821,25 +821,25 @@ bool Storage::ItemIterator::next()
 	return false;
 }
 
-String Storage::ItemIterator::ns_name() const
+String Storage::ItemIterator::nsName() const
 {
 	auto it = std::find(storage.mNamespaces.begin(), storage.mNamespaces.end(), nsIndex);
 	return it ? it->mName : nullptr;
 }
 
-HandlePtr Storage::open_handle(const String& ns_name, OpenMode open_mode)
+HandlePtr Storage::openHandle(const String& nsName, OpenMode openMode)
 {
-	if(ns_name.length() == 0 || ns_name.length() > NVS_KEY_NAME_MAX_SIZE) {
+	if(nsName.length() == 0 || nsName.length() > NVS_KEY_NAME_MAX_SIZE) {
 		mLastError = ESP_ERR_INVALID_ARG;
 		return nullptr;
 	}
 
 	uint8_t nsIndex;
-	if(!createOrOpenNamespace(ns_name, open_mode == OpenMode::ReadWrite, nsIndex)) {
+	if(!createOrOpenNamespace(nsName, openMode == OpenMode::ReadWrite, nsIndex)) {
 		return nullptr;
 	}
 
-	auto handle = new(std::nothrow) Handle(*this, nsIndex, open_mode == OpenMode::ReadOnly);
+	auto handle = new(std::nothrow) Handle(*this, nsIndex, openMode == OpenMode::ReadOnly);
 
 	if(handle == nullptr) {
 		mLastError = ESP_ERR_NO_MEM;

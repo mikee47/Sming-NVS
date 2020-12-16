@@ -23,8 +23,7 @@ Handle* getHandle(nvs_handle_t c_handle)
 
 esp_err_t nvs_flash_init(void)
 {
-	partitionManager.initPartition(NVS_DEFAULT_PART_NAME);
-	return partitionManager.lastError();
+	return partitionManager.initPartition(NVS_DEFAULT_PART_NAME) ? ESP_OK : partitionManager.lastError();
 }
 
 esp_err_t nvs_flash_erase_partition(const char* part_name)
@@ -46,8 +45,11 @@ esp_err_t nvs_flash_erase(void)
 
 esp_err_t nvs_open(const char* name, OpenMode open_mode, nvs_handle_t* out_handle)
 {
-	auto part = partitionManager.open(name, open_mode);
-	*out_handle = reinterpret_cast<nvs_handle_t>(part.release());
+	auto handle = partitionManager.openHandle(name, open_mode);
+	if(handle) {
+		*out_handle = reinterpret_cast<nvs_handle_t>(handle.release());
+		return ESP_OK;
+	}
 	return partitionManager.lastError();
 }
 

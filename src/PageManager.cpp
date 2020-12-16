@@ -215,9 +215,9 @@ esp_err_t PageManager::activatePage()
 
 esp_err_t PageManager::fillStats(nvs_stats_t& nvsStats)
 {
-	nvsStats.used_entries = 0;
-	nvsStats.free_entries = 0;
-	nvsStats.total_entries = 0;
+	nvsStats.usedEntries = 0;
+	nvsStats.freeEntries = 0;
+	nvsStats.totalEntries = 0;
 	esp_err_t err = ESP_OK;
 
 	// list of used pages
@@ -229,8 +229,8 @@ esp_err_t PageManager::fillStats(nvs_stats_t& nvsStats)
 	}
 
 	// free pages
-	nvsStats.total_entries += mFreePageList.size() * Page::ENTRY_COUNT;
-	nvsStats.free_entries += mFreePageList.size() * Page::ENTRY_COUNT;
+	nvsStats.totalEntries += mFreePageList.size() * Page::ENTRY_COUNT;
+	nvsStats.freeEntries += mFreePageList.size() * Page::ENTRY_COUNT;
 
 	return err;
 }
