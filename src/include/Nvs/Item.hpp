@@ -119,8 +119,7 @@ public:
 	Item(uint8_t nsIndex, ItemType datatype, uint8_t span, const String& key_, uint8_t chunkIdx = CHUNK_ANY)
 		: nsIndex(nsIndex), datatype(datatype), span(span), chunkIndex(chunkIdx)
 	{
-		std::fill_n(reinterpret_cast<uint32_t*>(key), sizeof(key) / 4, 0xffffffff);
-		std::fill_n(reinterpret_cast<uint32_t*>(data), sizeof(data) / 4, 0xffffffff);
+		init();
 		if(key_.length() > 0) {
 			strncpy(key, key_.c_str(), sizeof(key) - 1);
 			key[sizeof(key) - 1] = 0;
@@ -131,6 +130,7 @@ public:
 
 	Item()
 	{
+		init();
 	}
 
 	uint32_t calculateCrc32() const;
@@ -157,6 +157,13 @@ public:
 	bool operator!=(const String& key)
 	{
 		return !operator==(key);
+	}
+
+private:
+	void init()
+	{
+		std::fill_n(key, sizeof(key), 0xff);
+		std::fill_n(data, sizeof(data), 0xff);
 	}
 };
 

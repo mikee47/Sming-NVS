@@ -65,6 +65,16 @@ public:
 		return Nitems;
 	}
 
+	void clear()
+	{
+		std::fill_n(mData, WORD_COUNT, 0);
+	}
+
+	void setAll()
+	{
+		std::fill_n(mData, WORD_COUNT, 0xffffffff);
+	}
+
 protected:
 	static_assert(32 % Nbits == 0, "Nbits must divide 32");
 	static const size_t ITEMS_PER_WORD = 32 / Nbits;

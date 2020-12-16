@@ -102,7 +102,7 @@ bool Storage::init()
 
 	// load namespaces list
 	mNamespaces.clearAndFreeNodes();
-	std::fill_n(mNamespaceUsage.data(), mNamespaceUsage.byteSize() / 4, 0);
+	mNamespaceUsage.clear();
 	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
 		Page& p = *it;
 		size_t itemIndex = 0;
@@ -244,7 +244,6 @@ bool Storage::writeMultiPageBlob(uint8_t nsIndex, const String& key, const void*
 		if(remainingSize == 0) {
 			/* All pages are stored. Now store the index.*/
 			Item item;
-			std::fill_n(item.data, sizeof(item.data), 0xff);
 			item.blobIndex.dataSize = dataSize;
 			item.blobIndex.chunkCount = chunkCount;
 			item.blobIndex.chunkStart = chunkStart;

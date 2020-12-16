@@ -155,7 +155,7 @@ protected:
 	public:
 		Header()
 		{
-			std::fill_n(mReserved, sizeof(mReserved) / sizeof(mReserved[0]), UINT8_MAX);
+			std::fill_n(mReserved, sizeof(mReserved), 0xff);
 		}
 
 		PageState mState;	  // page state

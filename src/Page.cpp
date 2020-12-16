@@ -753,7 +753,7 @@ esp_err_t Page::initialize()
 	}
 
 	mNextFreeEntry = 0;
-	std::fill_n(mEntryTable.data(), mEntryTable.byteSize() / sizeof(uint32_t), 0xffffffff);
+	mEntryTable.setAll();
 	return ESP_OK;
 }
 
