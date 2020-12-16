@@ -14,10 +14,7 @@
 
 #pragma once
 
-#include <cassert>
-#include <algorithm>
 #include "nvs.h"
-#include "CompressedEnumTable.hpp"
 #include <WString.h>
 
 using namespace std;

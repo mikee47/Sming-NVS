@@ -15,12 +15,9 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include "Item.hpp"
 #include "Page.hpp"
 #include "PageManager.hpp"
-
-//extern void dumpBytes(const uint8_t* data, size_t count);
 
 namespace nvs
 {
@@ -60,7 +57,7 @@ class Storage : public intrusive_list_node<Storage>
 		VerOffset chunkStart;
 	};
 
-	typedef intrusive_list<BlobIndexNode> TBlobIndexList;
+	using TBlobIndexList = intrusive_list<BlobIndexNode>;
 
 	class ItemIterator : public Item
 	{

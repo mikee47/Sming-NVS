@@ -14,8 +14,7 @@
 
 #pragma once
 
-#include <cassert>
-#include <unordered_map>
+#include <cstddef>
 
 template <typename T> class intrusive_list;
 
@@ -29,7 +28,7 @@ protected:
 
 template <typename T> class intrusive_list
 {
-	typedef intrusive_list_node<T> TNode;
+	using TNode = intrusive_list_node<T>;
 	static_assert(std::is_base_of<TNode, T>::value, "");
 
 public:

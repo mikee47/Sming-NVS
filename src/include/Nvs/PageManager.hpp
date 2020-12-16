@@ -15,7 +15,6 @@
 #pragma once
 
 #include <memory>
-#include <list>
 #include "Item.hpp"
 #include "Page.hpp"
 #include "intrusive_list.h"
@@ -68,6 +67,6 @@ protected:
 	std::unique_ptr<Page[]> mPages;
 	uint32_t mPageCount;
 	uint32_t mSeqNumber;
-}; // class PageManager
+};
 
 } // namespace nvs

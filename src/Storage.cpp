@@ -29,9 +29,8 @@ bool Storage::populateBlobIndices(TBlobIndexList& blobIdxList)
          * duplicate index at this point */
 
 		while(p.findItem(Page::NS_ANY, ItemType::BLOB_IDX, nullptr, itemIndex, item) == ESP_OK) {
-			BlobIndexNode* entry = new(std::nothrow) BlobIndexNode;
-
-			if(!entry) {
+			auto entry = new(std::nothrow) BlobIndexNode;
+			if(entry == nullptr) {
 				mLastError = ESP_ERR_NO_MEM;
 				return false;
 			}
@@ -54,7 +53,7 @@ void Storage::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
 {
 	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
 		Page& p = *it;
-		size_t itemIndex = 0;
+		size_t itemIndex{0};
 		Item item;
 		/* Chunks with same <ns,key> and with chunkIndex in the following ranges
          * belong to same family.

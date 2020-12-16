@@ -20,10 +20,11 @@ esp_err_t PageManager::load(Partition& partition)
 	mPageCount = partition.size() / Page::SEC_SIZE;
 	mPageList.clear();
 	mFreePageList.clear();
-	mPages.reset(new(nothrow) Page[mPageCount]);
 
-	if(!mPages)
+	mPages.reset(new(nothrow) Page[mPageCount]);
+	if(!mPages) {
 		return ESP_ERR_NO_MEM;
+	}
 
 	for(uint32_t i = 0; i < mPageCount; ++i) {
 		auto err = mPages[i].load(partition, i);

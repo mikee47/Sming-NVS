@@ -50,10 +50,6 @@ String toString(nvs::Page::PageState ps)
 
 namespace nvs
 {
-Page::Page() : mPartition(nullptr)
-{
-}
-
 uint32_t Page::Header::calculateCrc32()
 {
 	return crc32_le(0xffffffff, reinterpret_cast<uint8_t*>(this) + offsetof(Header, mSeqNumber),
@@ -116,7 +112,7 @@ esp_err_t Page::load(Partition& partition, uint32_t sectorNumber)
 	case PageState::FULL:
 	case PageState::ACTIVE:
 	case PageState::FREEING:
-		mLoadEntryTable();
+		loadEntryTable();
 		break;
 
 	default:
@@ -542,7 +538,7 @@ esp_err_t Page::copyItems(Page& other)
 	return ESP_OK;
 }
 
-esp_err_t Page::mLoadEntryTable()
+esp_err_t Page::loadEntryTable()
 {
 	// for states where we actually care about data in the page, read entry state table
 	if(mState == PageState::ACTIVE || mState == PageState::FULL || mState == PageState::FREEING) {

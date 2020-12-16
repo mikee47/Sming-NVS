@@ -28,28 +28,28 @@ namespace nvs
 class Page : public intrusive_list_node<Page>
 {
 public:
-	static const uint32_t PSB_INIT = 0x1;
-	static const uint32_t PSB_FULL = 0x2;
-	static const uint32_t PSB_FREEING = 0x4;
-	static const uint32_t PSB_CORRUPT = 0x8;
+	static constexpr uint32_t PSB_INIT{0x1};
+	static constexpr uint32_t PSB_FULL{0x2};
+	static constexpr uint32_t PSB_FREEING{0x4};
+	static constexpr uint32_t PSB_CORRUPT{0x8};
 
-	static const uint32_t ESB_WRITTEN = 0x1;
-	static const uint32_t ESB_ERASED = 0x2;
+	static constexpr uint32_t ESB_WRITTEN{0x1};
+	static constexpr uint32_t ESB_ERASED{0x2};
 
-	static const uint32_t SEC_SIZE = SPI_FLASH_SEC_SIZE;
+	static constexpr uint32_t SEC_SIZE{SPI_FLASH_SEC_SIZE};
 
-	static const size_t ENTRY_SIZE = 32;
-	static const size_t ENTRY_COUNT = 126;
-	static const uint32_t INVALID_ENTRY = 0xffffffff;
+	static constexpr size_t ENTRY_SIZE{32};
+	static constexpr size_t ENTRY_COUNT{126};
+	static constexpr uint32_t INVALID_ENTRY{0xffffffff};
 
-	static const size_t CHUNK_MAX_SIZE = ENTRY_SIZE * (ENTRY_COUNT - 1);
+	static constexpr size_t CHUNK_MAX_SIZE{ENTRY_SIZE * (ENTRY_COUNT - 1)};
 
-	static const uint8_t NS_INDEX = 0;
-	static const uint8_t NS_ANY = 255;
+	static constexpr uint8_t NS_INDEX{0};
+	static constexpr uint8_t NS_ANY{255};
 
-	static const uint8_t CHUNK_ANY = Item::CHUNK_ANY;
+	static constexpr uint8_t CHUNK_ANY{Item::CHUNK_ANY};
 
-	static const uint8_t NVS_VERSION = 0xfe; // Decrement to upgrade
+	static constexpr uint8_t NVS_VERSION{0xfe}; // Decrement to upgrade
 
 	enum class PageState : uint32_t {
 		// All bits set, default state after flash erase. Page has not been initialized yet.
@@ -73,7 +73,9 @@ public:
 		INVALID = 0
 	};
 
-	Page();
+	Page()
+	{
+	}
 
 	PageState state() const
 	{
@@ -106,26 +108,6 @@ public:
 	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const String& key, size_t& itemIndex, Item& item,
 					   uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-	template <typename T> esp_err_t writeItem(uint8_t nsIndex, const String& key, const T& value)
-	{
-		return writeItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
-	}
-
-	template <typename T> esp_err_t readItem(uint8_t nsIndex, const String& key, T& value)
-	{
-		return readItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
-	}
-
-	template <typename T> esp_err_t cmpItem(uint8_t nsIndex, const String& key, const T& value)
-	{
-		return cmpItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
-	}
-
-	template <typename T> esp_err_t eraseItem(uint8_t nsIndex, const String& key)
-	{
-		return eraseItem(nsIndex, itemTypeOf<T>(), key);
-	}
-
 	size_t getUsedEntryCount() const
 	{
 		return mUsedEntryCount;
@@ -135,6 +117,7 @@ public:
 	{
 		return mErasedEntryCount;
 	}
+
 	size_t getVarDataTailroom() const;
 
 	esp_err_t markFull();
@@ -174,7 +157,7 @@ protected:
 		INVALID = 0x4 // entry is in inconsistent state (write started but ESB_WRITTEN has not been set yet)
 	};
 
-	esp_err_t mLoadEntryTable();
+	esp_err_t loadEntryTable();
 
 	esp_err_t initialize();
 
@@ -197,28 +180,27 @@ protected:
 	uint32_t getEntryAddress(size_t entry) const
 	{
 		assert(entry < ENTRY_COUNT);
-		return mBaseAddress + ENTRY_DATA_OFFSET + static_cast<uint32_t>(entry) * ENTRY_SIZE;
+		return mBaseAddress + ENTRY_DATA_OFFSET + (entry * ENTRY_SIZE);
 	}
 
 protected:
-	uint32_t mBaseAddress = 0;
-	PageState mState = PageState::INVALID;
-	uint32_t mSeqNumber = UINT32_MAX;
-	uint8_t mVersion = NVS_VERSION;
-	typedef CompressedEnumTable<EntryState, 2, ENTRY_COUNT> TEntryTable;
-	TEntryTable mEntryTable;
-	size_t mNextFreeEntry = INVALID_ENTRY;
-	size_t mFirstUsedEntry = INVALID_ENTRY;
-	uint16_t mUsedEntryCount = 0;
-	uint16_t mErasedEntryCount = 0;
+	uint32_t mBaseAddress{0};
+	PageState mState{PageState::INVALID};
+	uint32_t mSeqNumber{UINT32_MAX};
+	uint8_t mVersion{NVS_VERSION};
+	CompressedEnumTable<EntryState, 2, ENTRY_COUNT> mEntryTable;
+	size_t mNextFreeEntry{INVALID_ENTRY};
+	size_t mFirstUsedEntry{INVALID_ENTRY};
+	uint16_t mUsedEntryCount{0};
+	uint16_t mErasedEntryCount{0};
 
 	HashList mHashList;
 
-	Partition* mPartition;
+	Partition* mPartition{nullptr};
 
-	static const uint32_t HEADER_OFFSET = 0;
-	static const uint32_t ENTRY_TABLE_OFFSET = HEADER_OFFSET + 32;
-	static const uint32_t ENTRY_DATA_OFFSET = ENTRY_TABLE_OFFSET + 32;
+	static const uint32_t HEADER_OFFSET{0};
+	static const uint32_t ENTRY_TABLE_OFFSET{HEADER_OFFSET + 32};
+	static const uint32_t ENTRY_DATA_OFFSET{ENTRY_TABLE_OFFSET + 32};
 
 	static_assert(sizeof(Header) == 32, "header size must be 32 bytes");
 	static_assert(ENTRY_TABLE_OFFSET % 32 == 0, "entry table offset should be aligned");

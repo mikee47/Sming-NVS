@@ -53,14 +53,14 @@ protected:
 		HashListBlock();
 
 		static const size_t BYTE_SIZE = 128;
-		static const size_t ENTRY_COUNT = (BYTE_SIZE - sizeof(intrusive_list_node<HashListBlock>) - sizeof(size_t)) / 4;
+		static const size_t ENTRY_COUNT =
+			(BYTE_SIZE - sizeof(intrusive_list_node<HashListBlock>) - sizeof(size_t)) / sizeof(HashListNode);
 
 		size_t mCount = 0;
 		HashListNode mNodes[ENTRY_COUNT];
 	};
 
-	typedef intrusive_list<HashListBlock> TBlockList;
-	TBlockList mBlockList;
+	intrusive_list<HashListBlock> mBlockList;
 }; // class HashList
 
 } // namespace nvs

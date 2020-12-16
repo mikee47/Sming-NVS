@@ -14,10 +14,7 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
-#include <type_traits>
-
 #include "nvs.h"
 #include "Item.hpp"
 #include "Storage.hpp"

@@ -24,10 +24,10 @@ namespace nvs
 /**
  * @brief Key for encryption and decryption
  */
-typedef struct {
+struct nvs_sec_cfg_t {
 	uint8_t eky[NVS_KEY_SIZE]; /*!<  XTS encryption and decryption key*/
 	uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
-} nvs_sec_cfg_t;
+};
 
 class EncryptedPartition : public Partition
 {
