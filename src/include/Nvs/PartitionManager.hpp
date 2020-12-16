@@ -26,28 +26,28 @@ namespace nvs
 class PartitionManager
 {
 public:
-	::Storage::Partition find_partition(const char* label);
+	::Storage::Partition findPartition(const String& label);
 
-	PartitionPtr lookup_partition(const char* label);
+	PartitionPtr lookupPartition(const String& label);
 #ifdef ENABLE_NVS_ENCRYPTION
-	PartitionPtr lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg);
+	PartitionPtr lookupEncryptedPartition(const String& label, const nvs_sec_cfg_t& cfg);
 #endif
 
-	bool init_partition(const char* partition_label = NVS_DEFAULT_PART_NAME);
+	bool initPartition(const String& partition_label = NVS_DEFAULT_PART_NAME);
 
-	bool init_partition(PartitionPtr& partition);
+	bool initPartition(PartitionPtr& partition);
 
 #ifdef ENABLE_NVS_ENCRYPTION
-	bool secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg);
+	bool secure_init_partition(const String& part_name, const nvs_sec_cfg_t* cfg);
 #endif
 
-	bool deinit_partition(const char* partition_label = NVS_DEFAULT_PART_NAME);
+	bool deinitPartition(const String& partition_label = NVS_DEFAULT_PART_NAME);
 
-	Storage* lookup_storage(const String& part_name);
+	Storage* lookupStorage(const String& part_name);
 
-	HandlePtr open(const char* part_name, const char* ns_name, OpenMode open_mode);
+	HandlePtr open(const String& part_name, const String& ns_name, OpenMode open_mode);
 
-	HandlePtr open(const char* ns_name, OpenMode open_mode)
+	HandlePtr open(const String& ns_name, OpenMode open_mode)
 	{
 		return open(NVS_DEFAULT_PART_NAME, ns_name, open_mode);
 	}

@@ -14,13 +14,11 @@
 
 #pragma once
 
-#include <cstdint>
-#include <cstring>
 #include <cassert>
 #include <algorithm>
 #include "nvs.h"
 #include "CompressedEnumTable.hpp"
-#include "string.h"
+#include <WString.h>
 
 using namespace std;
 
@@ -118,16 +116,16 @@ public:
 	// 0xff cannot be used as a valid chunkIndex for blob datatype.
 	static const uint8_t CHUNK_ANY = 0xff;
 
-	Item(uint8_t nsIndex, ItemType datatype, uint8_t span, const char* key_, uint8_t chunkIdx = CHUNK_ANY)
+	Item(uint8_t nsIndex, ItemType datatype, uint8_t span, const String& key_, uint8_t chunkIdx = CHUNK_ANY)
 		: nsIndex(nsIndex), datatype(datatype), span(span), chunkIndex(chunkIdx)
 	{
 		std::fill_n(reinterpret_cast<uint32_t*>(key), sizeof(key) / 4, 0xffffffff);
 		std::fill_n(reinterpret_cast<uint32_t*>(data), sizeof(data) / 4, 0xffffffff);
-		if(key_) {
-			strncpy(key, key_, sizeof(key) - 1);
+		if(key_.length() > 0) {
+			strncpy(key, key_.c_str(), sizeof(key) - 1);
 			key[sizeof(key) - 1] = 0;
 		} else {
-			key[0] = 0;
+			key[0] = '\0';
 		}
 	}
 
@@ -149,6 +147,16 @@ public:
 	{
 		assert(itemTypeOf(dst) == datatype);
 		dst = *reinterpret_cast<T*>(data);
+	}
+
+	bool operator==(const String& key)
+	{
+		return strncmp(key.c_str(), this->key, MAX_KEY_LENGTH) == 0;
+	}
+
+	bool operator!=(const String& key)
+	{
+		return !operator==(key);
 	}
 };
 

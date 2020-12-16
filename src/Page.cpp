@@ -18,8 +18,35 @@
 #else
 #include "crc.h"
 #endif
-#include <cstdio>
-#include <cstring>
+
+String toString(nvs::Page::PageState ps)
+{
+	using PageState = nvs::Page::PageState;
+
+	switch(ps) {
+	case PageState::CORRUPT:
+		return F("CORRUPT");
+
+	case PageState::ACTIVE:
+		return F("ACTIVE");
+
+	case PageState::FREEING:
+		return F("FREEING");
+
+	case PageState::FULL:
+		return F("FULL");
+
+	case PageState::INVALID:
+		return F("INVALID");
+
+	case PageState::UNINITIALIZED:
+		return F("UNINITIALIZED");
+
+	default:
+		assert(0 && "invalid state value");
+		return nullptr;
+	}
+}
 
 namespace nvs
 {
@@ -173,7 +200,7 @@ esp_err_t Page::writeEntryData(const uint8_t* data, size_t size)
 	return ESP_OK;
 }
 
-esp_err_t Page::writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize,
+esp_err_t Page::writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 						  uint8_t chunkIdx)
 {
 	Item item;
@@ -194,8 +221,7 @@ esp_err_t Page::writeItem(uint8_t nsIndex, ItemType datatype, const char* key, c
 		return ESP_ERR_NVS_PAGE_FULL;
 	}
 
-	const size_t keySize = strlen(key);
-	if(keySize > Item::MAX_KEY_LENGTH) {
+	if(key.length() > Item::MAX_KEY_LENGTH) {
 		return ESP_ERR_NVS_KEY_TOO_LONG;
 	}
 
@@ -267,7 +293,7 @@ esp_err_t Page::writeItem(uint8_t nsIndex, ItemType datatype, const char* key, c
 	return ESP_OK;
 }
 
-esp_err_t Page::readItem(uint8_t nsIndex, ItemType datatype, const char* key, void* data, size_t dataSize,
+esp_err_t Page::readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize,
 						 uint8_t chunkIdx, VerOffset chunkStart)
 {
 	size_t index = 0;
@@ -319,7 +345,7 @@ esp_err_t Page::readItem(uint8_t nsIndex, ItemType datatype, const char* key, vo
 	return ESP_OK;
 }
 
-esp_err_t Page::cmpItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize,
+esp_err_t Page::cmpItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 						uint8_t chunkIdx, VerOffset chunkStart)
 {
 	size_t index = 0;
@@ -373,7 +399,7 @@ esp_err_t Page::cmpItem(uint8_t nsIndex, ItemType datatype, const char* key, con
 	return ESP_OK;
 }
 
-esp_err_t Page::eraseItem(uint8_t nsIndex, ItemType datatype, const char* key, uint8_t chunkIdx, VerOffset chunkStart)
+esp_err_t Page::eraseItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx, VerOffset chunkStart)
 {
 	size_t index = 0;
 	Item item;
@@ -384,7 +410,7 @@ esp_err_t Page::eraseItem(uint8_t nsIndex, ItemType datatype, const char* key, u
 	return eraseEntryAndSpan(index);
 }
 
-esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const char* key, uint8_t chunkIdx, VerOffset chunkStart)
+esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx, VerOffset chunkStart)
 {
 	size_t index = 0;
 	Item item;
@@ -793,7 +819,7 @@ esp_err_t Page::readEntry(size_t index, Item& dst) const
 	return ESP_OK;
 }
 
-esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const char* key, size_t& itemIndex, Item& item,
+esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const String& key, size_t& itemIndex, Item& item,
 						 uint8_t chunkIdx, VerOffset chunkStart)
 {
 	if(mState == PageState::CORRUPT || mState == PageState::INVALID || mState == PageState::UNINITIALIZED) {
@@ -815,7 +841,7 @@ esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const char* key, si
 		end = ENTRY_COUNT;
 	}
 
-	if(nsIndex != NS_ANY && datatype != ItemType::ANY && key != NULL) {
+	if(nsIndex != NS_ANY && datatype != ItemType::ANY && key) {
 		size_t cachedIndex = mHashList.find(start, Item(nsIndex, datatype, 0, key, chunkIdx));
 		if(cachedIndex < ENTRY_COUNT) {
 			start = cachedIndex;
@@ -855,7 +881,7 @@ esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const char* key, si
 			continue;
 		}
 
-		if(key != nullptr && strncmp(key, item.key, Item::MAX_KEY_LENGTH) != 0) {
+		if(key && item != key) {
 			continue;
 		}
 		/* For blob data, chunkIndex should match*/
@@ -874,7 +900,7 @@ esp_err_t Page::findItem(uint8_t nsIndex, ItemType datatype, const char* key, si
 		}
 
 		if(datatype != ItemType::ANY && item.datatype != datatype) {
-			if(key == nullptr && nsIndex == NS_ANY && chunkIdx == CHUNK_ANY) {
+			if(!key && nsIndex == NS_ANY && chunkIdx == CHUNK_ANY) {
 				continue; // continue for bruteforce search on blob indices.
 			}
 			itemIndex = i;
@@ -959,60 +985,33 @@ size_t Page::getVarDataTailroom() const
 	return ((mNextFreeEntry < (ENTRY_COUNT - 1)) ? ((ENTRY_COUNT - mNextFreeEntry - 1) * ENTRY_SIZE) : 0);
 }
 
-const char* Page::pageStateToName(PageState ps)
-{
-	switch(ps) {
-	case PageState::CORRUPT:
-		return "CORRUPT";
-
-	case PageState::ACTIVE:
-		return "ACTIVE";
-
-	case PageState::FREEING:
-		return "FREEING";
-
-	case PageState::FULL:
-		return "FULL";
-
-	case PageState::INVALID:
-		return "INVALID";
-
-	case PageState::UNINITIALIZED:
-		return "UNINITIALIZED";
-
-	default:
-		assert(0 && "invalid state value");
-		return "";
-	}
-}
-
 void Page::debugDump() const
 {
-	printf("state=%x (%s) addr=%x seq=%d\nfirstUsed=%d nextFree=%d used=%d erased=%d\n", (uint32_t)mState,
-		   pageStateToName(mState), mBaseAddress, mSeqNumber, static_cast<int>(mFirstUsedEntry),
-		   static_cast<int>(mNextFreeEntry), mUsedEntryCount, mErasedEntryCount);
+	m_printf(_F("state=%x (%s) addr=%x seq=%d\nfirstUsed=%d nextFree=%d used=%d erased=%d\r\n"), uint32_t(mState),
+			 toString(mState).c_str(), mBaseAddress, mSeqNumber, int(mFirstUsedEntry), int(mNextFreeEntry),
+			 mUsedEntryCount, mErasedEntryCount);
 	size_t skip = 0;
 	for(size_t i = 0; i < ENTRY_COUNT; ++i) {
-		printf("%3d: ", static_cast<int>(i));
+		m_printf(_F("%3u: "), i);
 		EntryState state = mEntryTable.get(i);
 		if(state == EntryState::EMPTY) {
-			printf("E\n");
+			m_printf("E\r\n");
 		} else if(state == EntryState::ERASED) {
-			printf("X\n");
+			m_printf("X\r\n");
 		} else if(state == EntryState::WRITTEN) {
 			Item item;
 			readEntry(i, item);
 			if(skip == 0) {
-				printf("W ns=%2u type=%2u span=%3u key=\"%s\" chunkIdx=%d len=%d\n", item.nsIndex,
-					   static_cast<unsigned>(item.datatype), item.span, item.key, item.chunkIndex,
-					   (item.span != 1) ? ((int)item.varLength.dataSize) : -1);
+				m_printf(_F("W ns=%2u type=%2u span=%3u key=\"%s\" chunkIdx=%d len=%d\r\n"), item.nsIndex,
+						 unsigned(item.datatype), item.span, item.key, item.chunkIndex,
+						 (item.span != 1) ? int(item.varLength.dataSize) : -1);
 				if(item.span > 0 && item.span <= ENTRY_COUNT - i) {
 					skip = item.span - 1;
 				} else {
 					skip = 0;
 				}
 			} else {
-				printf("D\n");
+				m_printf("D\rn");
 				skip--;
 			}
 		}

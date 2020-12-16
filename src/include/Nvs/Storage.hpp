@@ -43,9 +43,9 @@ class Storage : public intrusive_list_node<Storage>
 			return index == mIndex;
 		}
 
-		bool operator==(const char* name) const
+		bool operator==(const String& name) const
 		{
-			return strncmp(mName, name, Item::MAX_KEY_LENGTH) == 0;
+			return name.equalsIgnoreCase(mName);
 		}
 	};
 
@@ -65,7 +65,7 @@ class Storage : public intrusive_list_node<Storage>
 	class ItemIterator : public Item
 	{
 	public:
-		ItemIterator(Storage& storage, const char* ns_name, ItemType itemType);
+		ItemIterator(Storage& storage, const String& ns_name, ItemType itemType);
 
 		void reset();
 
@@ -94,7 +94,7 @@ public:
 
 	~Storage()
 	{
-		assert(mHandleCount == 0);
+		assert(checkNoHandlesInUse());
 		mNamespaces.clearAndFreeNodes();
 	}
 
@@ -110,29 +110,29 @@ public:
 		return mState == State::ACTIVE;
 	}
 
-	bool createOrOpenNamespace(const char* nsName, bool canCreate, uint8_t& nsIndex);
+	bool createOrOpenNamespace(const String& nsName, bool canCreate, uint8_t& nsIndex);
 
-	HandlePtr open_handle(const char* ns_name, OpenMode open_mode);
+	HandlePtr open_handle(const String& ns_name, OpenMode open_mode);
 
-	bool writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize);
+	bool writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize);
 
-	bool readItem(uint8_t nsIndex, ItemType datatype, const char* key, void* data, size_t dataSize);
+	bool readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize);
 
-	bool getItemDataSize(uint8_t nsIndex, ItemType datatype, const char* key, size_t& dataSize);
+	bool getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize);
 
-	bool eraseItem(uint8_t nsIndex, ItemType datatype, const char* key);
+	bool eraseItem(uint8_t nsIndex, ItemType datatype, const String& key);
 
-	template <typename T> bool writeItem(uint8_t nsIndex, const char* key, const T& value)
+	template <typename T> bool writeItem(uint8_t nsIndex, const String& key, const T& value)
 	{
 		return writeItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	template <typename T> bool readItem(uint8_t nsIndex, const char* key, T& value)
+	template <typename T> bool readItem(uint8_t nsIndex, const String& key, T& value)
 	{
 		return readItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	bool eraseItem(uint8_t nsIndex, const char* key)
+	bool eraseItem(uint8_t nsIndex, const String& key)
 	{
 		return eraseItem(nsIndex, ItemType::ANY, key);
 	}
@@ -144,13 +144,14 @@ public:
 		return *mPartition;
 	}
 
-	bool writeMultiPageBlob(uint8_t nsIndex, const char* key, const void* data, size_t dataSize, VerOffset chunkStart);
+	bool writeMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize,
+							VerOffset chunkStart);
 
-	bool readMultiPageBlob(uint8_t nsIndex, const char* key, void* data, size_t dataSize);
+	bool readMultiPageBlob(uint8_t nsIndex, const String& key, void* data, size_t dataSize);
 
-	bool cmpMultiPageBlob(uint8_t nsIndex, const char* key, const void* data, size_t dataSize);
+	bool cmpMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize);
 
-	bool eraseMultiPageBlob(uint8_t nsIndex, const char* key, VerOffset chunkStart = VerOffset::VER_ANY);
+	bool eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset chunkStart = VerOffset::VER_ANY);
 
 	void debugDump();
 
@@ -160,7 +161,7 @@ public:
 
 	bool calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries);
 
-	ItemIterator findEntry(const char* namespace_name = nullptr, ItemType itemType = ItemType::ANY)
+	ItemIterator findEntry(const String& namespace_name = nullptr, ItemType itemType = ItemType::ANY)
 	{
 		return ItemIterator(*this, namespace_name, itemType);
 	}
@@ -174,6 +175,8 @@ public:
 	{
 		return mHandleCount;
 	}
+
+	bool checkNoHandlesInUse();
 
 private:
 	friend Handle;
@@ -194,7 +197,7 @@ private:
 
 	void eraseOrphanDataBlobs(TBlobIndexList&);
 
-	bool findItem(uint8_t nsIndex, ItemType datatype, const char* key, Page*& page, Item& item,
+	bool findItem(uint8_t nsIndex, ItemType datatype, const String& key, Page*& page, Item& item,
 				  uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
 	PartitionPtr mPartition;

@@ -19,7 +19,7 @@ namespace nvs
 {
 PartitionManager partitionManager;
 
-::Storage::Partition PartitionManager::find_partition(const char* label)
+::Storage::Partition PartitionManager::findPartition(const String& label)
 {
 	auto part = ::Storage::PartitionTable().find(label);
 	if(!part) {
@@ -37,9 +37,9 @@ PartitionManager partitionManager;
 	return part;
 }
 
-PartitionPtr PartitionManager::lookup_partition(const char* label)
+PartitionPtr PartitionManager::lookupPartition(const String& label)
 {
-	auto part = find_partition(label);
+	auto part = findPartition(label);
 	if(!part) {
 		return nullptr;
 	}
@@ -50,9 +50,9 @@ PartitionPtr PartitionManager::lookup_partition(const char* label)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-PartitionPtr PartitionManager::lookup_encrypted_partition(const char* label, const nvs_sec_cfg_t& cfg)
+PartitionPtr PartitionManager::lookupEncryptedPartition(const String& label, const nvs_sec_cfg_t& cfg)
 {
-	auto part = find_partition(label);
+	auto part = findPartition(label);
 	if(!part) {
 		return nullptr;
 	}
@@ -74,10 +74,11 @@ PartitionPtr PartitionManager::lookup_encrypted_partition(const char* label, con
 
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::init_partition(const char* partition_label)
+bool PartitionManager::initPartition(const String& partition_label)
 {
-	auto storage = lookup_storage(partition_label);
+	auto storage = lookupStorage(partition_label);
 	if(storage != nullptr) {
+		// Already initialised
 		return true;
 	}
 	if(mLastError == ESP_ERR_INVALID_ARG) {
@@ -86,17 +87,17 @@ bool PartitionManager::init_partition(const char* partition_label)
 
 	static_assert(SPI_FLASH_SEC_SIZE != 0, "Invalid SPI_FLASH_SEC_SIZE");
 
-	auto p = lookup_partition(partition_label);
+	auto p = lookupPartition(partition_label);
 	if(!p) {
 		return false;
 	}
 
-	return init_partition(p);
+	return initPartition(p);
 }
 
-bool PartitionManager::init_partition(PartitionPtr& partition)
+bool PartitionManager::initPartition(PartitionPtr& partition)
 {
-	auto storage = lookup_storage(partition->name());
+	auto storage = lookupStorage(partition->name());
 	if(storage == nullptr) {
 		storage = new(std::nothrow) Storage(partition);
 
@@ -129,9 +130,9 @@ bool PartitionManager::init_partition(PartitionPtr& partition)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-bool PartitionManager::secure_init_partition(const char* part_name, const nvs_sec_cfg_t* cfg)
+bool PartitionManager::secure_init_partition(const String& part_name, const nvs_sec_cfg_t* cfg)
 {
-	auto storage = lookup_storage(part_name);
+	auto storage = lookupStorage(part_name);
 	if(storage != nullptr) {
 		return true;
 	}
@@ -141,22 +142,27 @@ bool PartitionManager::secure_init_partition(const char* part_name, const nvs_se
 
 	PartitionPtr p;
 	if(cfg != nullptr) {
-		p = lookup_encrypted_partition(part_name, *cfg);
+		p = lookupEncryptedPartition(part_name, *cfg);
 	} else {
-		p = lookup_partition(part_name);
+		p = lookupPartition(part_name);
 	}
 	if(!p) {
 		return false;
 	}
 
-	return init_partition(p);
+	return initPartition(p);
 }
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::deinit_partition(const char* partition_label)
+bool PartitionManager::deinitPartition(const String& partition_label)
 {
-	Storage* storage = lookup_storage(partition_label);
+	Storage* storage = lookupStorage(partition_label);
 	if(!storage) {
+		return true;
+	}
+
+	if(!storage->checkNoHandlesInUse()) {
+		mLastError = storage->lastError();
 		return false;
 	}
 
@@ -166,9 +172,9 @@ bool PartitionManager::deinit_partition(const char* partition_label)
 	return true;
 }
 
-HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, OpenMode open_mode)
+HandlePtr PartitionManager::open(const String& part_name, const String& ns_name, OpenMode open_mode)
 {
-	auto storage = lookup_storage(part_name);
+	auto storage = lookupStorage(part_name);
 	if(storage == nullptr) {
 		return nullptr;
 	}
@@ -178,7 +184,7 @@ HandlePtr PartitionManager::open(const char* part_name, const char* ns_name, Ope
 	return handle;
 }
 
-Storage* PartitionManager::lookup_storage(const String& part_name)
+Storage* PartitionManager::lookupStorage(const String& part_name)
 {
 	if(part_name.length() > ::Storage::Partition::nameSize) {
 		mLastError = ESP_ERR_INVALID_ARG;

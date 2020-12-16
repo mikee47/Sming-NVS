@@ -75,15 +75,15 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-	template <typename T> bool set_item(const char* key, T value)
+	template <typename T> bool set_item(const String& key, T value)
 	{
 		return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	bool set_string(const char* key, const char* value)
+	bool set_string(const String& key, const String& value)
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value, strlen(value) + 1));
+		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value.c_str(), value.length() + 1));
 	}
 
 	/**
@@ -106,7 +106,7 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	template <typename T> bool get_item(const char* key, T& value)
+	template <typename T> bool get_item(const String& key, T& value)
 	{
 		return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
 	}
@@ -137,7 +137,7 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-	bool set_blob(const char* key, const void* blob, size_t len)
+	bool set_blob(const String& key, const void* blob, size_t len)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
@@ -171,12 +171,12 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	bool get_string(const char* key, char* out_str, size_t len)
+	bool get_string(const String& key, char* out_str, size_t len)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
 	}
 
-	bool get_blob(const char* key, void* out_blob, size_t len)
+	bool get_blob(const String& key, void* out_blob, size_t len)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
 	}
@@ -186,7 +186,7 @@ public:
      *
      * For strings, this size includes the zero terminator.
      */
-	bool get_item_size(ItemType datatype, const char* key, size_t& size)
+	bool get_item_size(ItemType datatype, const String& key, size_t& size)
 	{
 		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, size));
 	}
@@ -194,7 +194,7 @@ public:
 	/**
      * @brief Erases an entry.
      */
-	bool erase_item(const char* key)
+	bool erase_item(const String& key)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.eraseItem(mNsIndex, key));
@@ -249,7 +249,7 @@ public:
 		return false;
 	}
 
-	bool getItemDataSize(ItemType dataType, const char* key, size_t& dataSize)
+	bool getItemDataSize(ItemType dataType, const String& key, size_t& dataSize)
 	{
 		return checkStorage(mStorage.getItemDataSize(mNsIndex, dataType, key, dataSize));
 	}
@@ -279,13 +279,13 @@ public:
 		return this == &other;
 	}
 
-	bool set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
+	bool set_typed_item(ItemType datatype, const String& key, const void* data, size_t dataSize)
 	{
 		CHECK_WRITE()
 		return checkStorage(mStorage.writeItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
-	bool get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
+	bool get_typed_item(ItemType datatype, const String& key, void* data, size_t dataSize)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, datatype, key, data, dataSize));
 	}

@@ -16,10 +16,7 @@
 
 #include "nvs.h"
 #include "Item.hpp"
-#include <cstdint>
-#include <type_traits>
-#include <cstring>
-#include <algorithm>
+#include <WString.h>
 #include <esp_spi_flash.h>
 #include "CompressedEnumTable.hpp"
 #include "intrusive_list.h"
@@ -91,40 +88,40 @@ public:
 
 	esp_err_t setVersion(uint8_t version);
 
-	esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize,
+	esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 						uint8_t chunkIdx = CHUNK_ANY);
 
-	esp_err_t readItem(uint8_t nsIndex, ItemType datatype, const char* key, void* data, size_t dataSize,
+	esp_err_t readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize,
 					   uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-	esp_err_t cmpItem(uint8_t nsIndex, ItemType datatype, const char* key, const void* data, size_t dataSize,
+	esp_err_t cmpItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 					  uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-	esp_err_t eraseItem(uint8_t nsIndex, ItemType datatype, const char* key, uint8_t chunkIdx = CHUNK_ANY,
+	esp_err_t eraseItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx = CHUNK_ANY,
 						VerOffset chunkStart = VerOffset::VER_ANY);
 
-	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, uint8_t chunkIdx = CHUNK_ANY,
+	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx = CHUNK_ANY,
 					   VerOffset chunkStart = VerOffset::VER_ANY);
 
-	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const char* key, size_t& itemIndex, Item& item,
+	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const String& key, size_t& itemIndex, Item& item,
 					   uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
-	template <typename T> esp_err_t writeItem(uint8_t nsIndex, const char* key, const T& value)
+	template <typename T> esp_err_t writeItem(uint8_t nsIndex, const String& key, const T& value)
 	{
 		return writeItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	template <typename T> esp_err_t readItem(uint8_t nsIndex, const char* key, T& value)
+	template <typename T> esp_err_t readItem(uint8_t nsIndex, const String& key, T& value)
 	{
 		return readItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	template <typename T> esp_err_t cmpItem(uint8_t nsIndex, const char* key, const T& value)
+	template <typename T> esp_err_t cmpItem(uint8_t nsIndex, const String& key, const T& value)
 	{
 		return cmpItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
-	template <typename T> esp_err_t eraseItem(uint8_t nsIndex, const char* key)
+	template <typename T> esp_err_t eraseItem(uint8_t nsIndex, const String& key)
 	{
 		return eraseItem(nsIndex, itemTypeOf<T>(), key);
 	}
@@ -208,8 +205,6 @@ protected:
 		return mBaseAddress + ENTRY_DATA_OFFSET + static_cast<uint32_t>(entry) * ENTRY_SIZE;
 	}
 
-	static const char* pageStateToName(PageState ps);
-
 protected:
 	uint32_t mBaseAddress = 0;
 	PageState mState = PageState::INVALID;
@@ -237,3 +232,5 @@ protected:
 }; // class Page
 
 } // namespace nvs
+
+String toString(nvs::Page::PageState ps);

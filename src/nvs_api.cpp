@@ -23,15 +23,15 @@ Handle* getHandle(nvs_handle_t c_handle)
 
 esp_err_t nvs_flash_init(void)
 {
-	partitionManager.init_partition(NVS_DEFAULT_PART_NAME);
+	partitionManager.initPartition(NVS_DEFAULT_PART_NAME);
 	return partitionManager.lastError();
 }
 
 esp_err_t nvs_flash_erase_partition(const char* part_name)
 {
-	partitionManager.deinit_partition(part_name);
+	partitionManager.deinitPartition(part_name);
 
-	auto part = partitionManager.find_partition(part_name);
+	auto part = partitionManager.findPartition(part_name);
 	if(!part) {
 		return ESP_ERR_NOT_FOUND;
 	}
