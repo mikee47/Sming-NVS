@@ -93,17 +93,20 @@ typedef uint32_t nvs_handle_t;
  *
  */
 typedef enum {
-	NVS_TYPE_U8 = 0x01,   /*!< Type uint8_t */
-	NVS_TYPE_I8 = 0x11,   /*!< Type int8_t */
-	NVS_TYPE_U16 = 0x02,  /*!< Type uint16_t */
-	NVS_TYPE_I16 = 0x12,  /*!< Type int16_t */
-	NVS_TYPE_U32 = 0x04,  /*!< Type uint32_t */
-	NVS_TYPE_I32 = 0x14,  /*!< Type int32_t */
-	NVS_TYPE_U64 = 0x08,  /*!< Type uint64_t */
-	NVS_TYPE_I64 = 0x18,  /*!< Type int64_t */
-	NVS_TYPE_STR = 0x21,  /*!< Type string */
-	NVS_TYPE_BLOB = 0x42, /*!< Type blob */
-	NVS_TYPE_ANY = 0xff   /*!< Must be last */
+	NVS_TYPE_UNSIGNED = 0x00,
+	NVS_TYPE_SIGNED = 0x10,
+
+	NVS_TYPE_U8 = NVS_TYPE_UNSIGNED | sizeof(uint8_t),   /*!< Type uint8_t */
+	NVS_TYPE_I8 = NVS_TYPE_SIGNED | sizeof(uint8_t),	 /*!< Type int8_t */
+	NVS_TYPE_U16 = NVS_TYPE_UNSIGNED | sizeof(uint16_t), /*!< Type uint16_t */
+	NVS_TYPE_I16 = NVS_TYPE_SIGNED | sizeof(uint16_t),   /*!< Type int16_t */
+	NVS_TYPE_U32 = NVS_TYPE_UNSIGNED | sizeof(uint32_t), /*!< Type uint32_t */
+	NVS_TYPE_I32 = NVS_TYPE_SIGNED | sizeof(uint32_t),   /*!< Type int32_t */
+	NVS_TYPE_U64 = NVS_TYPE_UNSIGNED | sizeof(uint64_t), /*!< Type uint64_t */
+	NVS_TYPE_I64 = NVS_TYPE_SIGNED | sizeof(uint64_t),   /*!< Type int64_t */
+	NVS_TYPE_STR = 0x21,								 /*!< Type string */
+	NVS_TYPE_BLOB = 0x42,								 /*!< Type blob */
+	NVS_TYPE_ANY = 0xff									 /*!< Must be last */
 } nvs_type_t;
 
 /**

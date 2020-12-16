@@ -66,7 +66,7 @@ inline bool isVariableLengthType(ItemType type)
 template <typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
 constexpr ItemType itemTypeOf()
 {
-	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? NVS_TYPE_SIGNED : NVS_TYPE_UNSIGNED) | sizeof(T));
 }
 
 /**
@@ -74,7 +74,7 @@ constexpr ItemType itemTypeOf()
  */
 template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0> constexpr ItemType itemTypeOf()
 {
-	return static_cast<ItemType>(((std::is_signed<T>::value) ? 0x10 : 0x00) | sizeof(T));
+	return static_cast<ItemType>(((std::is_signed<T>::value) ? NVS_TYPE_SIGNED : NVS_TYPE_UNSIGNED) | sizeof(T));
 }
 
 template <typename T> constexpr ItemType itemTypeOf(const T&)
