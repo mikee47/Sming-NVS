@@ -21,9 +21,9 @@ PartitionManager partitionManager;
 
 ::Storage::Partition PartitionManager::findPartition(const String& name)
 {
-	auto part = ::Storage::PartitionTable().find(name);
+	auto part = partitionTable.find(name);
 	if(!part) {
-		mLastError = ESP_ERR_NOT_FOUND;
+		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
 	} else if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
 		mLastError = ESP_ERR_NOT_SUPPORTED;
 		part = ::Storage::Partition{};
@@ -154,9 +154,9 @@ bool PartitionManager::secureInitPartition(const String& name, const nvs_sec_cfg
 }
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::deinitPartition(const String& partition_label)
+bool PartitionManager::deinitPartition(const String& name)
 {
-	Storage* storage = lookupStorage(partition_label);
+	Storage* storage = lookupStorage(name);
 	if(!storage) {
 		return true;
 	}
@@ -191,13 +191,8 @@ Storage* PartitionManager::lookupStorage(const String& partName)
 		return nullptr;
 	}
 
-	if(storage_list.empty()) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
-		return nullptr;
-	}
-
 	auto it = find(begin(storage_list), end(storage_list), partName);
-	mLastError = it ? ESP_OK : ESP_ERR_NOT_FOUND;
+	mLastError = it ? ESP_OK : ESP_ERR_NVS_NOT_INITIALIZED;
 	return static_cast<Storage*>(it);
 }
 

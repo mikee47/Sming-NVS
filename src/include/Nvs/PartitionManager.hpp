@@ -33,7 +33,7 @@ public:
 	PartitionPtr lookupEncryptedPartition(const String& name, const nvs_sec_cfg_t& cfg);
 #endif
 
-	bool initPartition(const String& name = NVS_DEFAULT_PART_NAME);
+	bool initPartition(const String& name);
 
 	bool initPartition(PartitionPtr& partition);
 
@@ -41,16 +41,11 @@ public:
 	bool secureInitPartition(const String& name, const nvs_sec_cfg_t* cfg);
 #endif
 
-	bool deinitPartition(const String& name = NVS_DEFAULT_PART_NAME);
+	bool deinitPartition(const String& name);
 
 	Storage* lookupStorage(const String& name);
 
 	HandlePtr openHandle(const String& partName, const String& nsName, OpenMode openMode);
-
-	HandlePtr openHandle(const String& nsName, OpenMode openMode)
-	{
-		return openHandle(NVS_DEFAULT_PART_NAME, nsName, openMode);
-	}
 
 	esp_err_t lastError() const
 	{
@@ -69,14 +64,14 @@ inline HandlePtr openHandle(const String& partName, const String& nsName, OpenMo
 	return partitionManager.openHandle(partName, nsName, openMode);
 }
 
-inline HandlePtr openHandle(const String& nsName, OpenMode openMode)
-{
-	return partitionManager.openHandle(nsName, openMode);
-}
-
 inline bool initPartition(const String& name)
 {
 	return partitionManager.initPartition(name);
+}
+
+inline bool deinitPartition(const String& name)
+{
+	return partitionManager.deinitPartition(name);
 }
 
 } // namespace nvs

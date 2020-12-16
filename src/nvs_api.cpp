@@ -32,7 +32,7 @@ esp_err_t nvs_flash_erase_partition(const char* part_name)
 
 	auto part = partitionManager.findPartition(part_name);
 	if(!part) {
-		return ESP_ERR_NOT_FOUND;
+		return ESP_ERR_NVS_PART_NOT_FOUND;
 	}
 
 	return part.erase_range(0, part.size()) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
@@ -45,7 +45,7 @@ esp_err_t nvs_flash_erase(void)
 
 esp_err_t nvs_open(const char* name, OpenMode open_mode, nvs_handle_t* out_handle)
 {
-	auto handle = partitionManager.openHandle(name, open_mode);
+	auto handle = partitionManager.openHandle(NVS_DEFAULT_PART_NAME, name, open_mode);
 	if(handle) {
 		*out_handle = reinterpret_cast<nvs_handle_t>(handle.release());
 		return ESP_OK;
