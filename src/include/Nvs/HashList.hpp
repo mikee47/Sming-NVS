@@ -23,30 +23,43 @@ namespace nvs
 class HashList
 {
 public:
-	HashList();
-	~HashList();
+	HashList()
+	{
+	}
+
+	HashList(const HashList& other) = delete;
+
+	~HashList()
+	{
+		clear();
+	}
+
+	const HashList& operator=(const HashList& rhs) = delete;
 
 	esp_err_t insert(const Item& item, size_t index);
 	void erase(const size_t index, bool itemShouldExist = true);
 	size_t find(size_t start, const Item& item);
 	void clear();
 
-private:
-	HashList(const HashList& other);
-	const HashList& operator=(const HashList& rhs);
-
 protected:
 	struct HashListNode {
-		HashListNode() : mIndex(0xff), mHash(0)
-		{
-		}
-
-		HashListNode(uint32_t hash, size_t index) : mIndex((uint32_t)index), mHash(hash)
-		{
-		}
-
 		uint32_t mIndex : 8;
 		uint32_t mHash : 24;
+
+		bool isValid() const
+		{
+			return mIndex != 0xff;
+		}
+
+		void invalidate()
+		{
+			mIndex = 0xff;
+		}
+
+		bool matches(uint8_t startIndex, uint32_t hash) const
+		{
+			return mHash == hash && isValid() && mIndex >= startIndex;
+		}
 	};
 
 	struct HashListBlock : public intrusive_list_node<HashList::HashListBlock> {
@@ -56,7 +69,16 @@ protected:
 		static const size_t ENTRY_COUNT =
 			(BYTE_SIZE - sizeof(intrusive_list_node<HashListBlock>) - sizeof(size_t)) / sizeof(HashListNode);
 
-		size_t mCount = 0;
+		bool add(uint32_t index, uint32_t hash)
+		{
+			if(mCount >= ENTRY_COUNT) {
+				return false;
+			}
+			mNodes[mCount++] = HashListNode{index, hash};
+			return true;
+		}
+
+		size_t mCount{0};
 		HashListNode mNodes[ENTRY_COUNT];
 	};
 

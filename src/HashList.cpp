@@ -16,10 +16,6 @@
 
 namespace nvs
 {
-HashList::HashList()
-{
-}
-
 void HashList::clear()
 {
 	for(auto it = mBlockList.begin(); it != mBlockList.end();) {
@@ -28,11 +24,6 @@ void HashList::clear()
 		mBlockList.erase(tmp);
 		delete static_cast<HashListBlock*>(tmp);
 	}
-}
-
-HashList::~HashList()
-{
-	clear();
 }
 
 HashList::HashListBlock::HashListBlock()
@@ -44,23 +35,21 @@ esp_err_t HashList::insert(const Item& item, size_t index)
 {
 	const uint32_t hash_24 = item.calculateCrc32WithoutValue() & 0xffffff;
 	// add entry to the end of last block if possible
-	if(mBlockList.size()) {
+	if(!mBlockList.empty()) {
 		auto& block = mBlockList.back();
-		if(block.mCount < HashListBlock::ENTRY_COUNT) {
-			block.mNodes[block.mCount++] = HashListNode(hash_24, index);
+		if(block.add(index, hash_24)) {
 			return ESP_OK;
 		}
 	}
-	// if the above failed, create a new block and add entry to it
-	HashListBlock* newBlock = new(std::nothrow) HashListBlock;
 
-	if(!newBlock)
+	// if the above failed, create a new block and add entry to it
+	auto newBlock = new(std::nothrow) HashListBlock;
+	if(newBlock == nullptr) {
 		return ESP_ERR_NO_MEM;
+	}
 
 	mBlockList.push_back(newBlock);
-	newBlock->mNodes[0] = HashListNode(hash_24, index);
-	newBlock->mCount++;
-
+	newBlock->add(index, hash_24);
 	return ESP_OK;
 }
 
@@ -70,12 +59,13 @@ void HashList::erase(size_t index, bool itemShouldExist)
 		bool haveEntries = false;
 		bool foundIndex = false;
 		for(size_t i = 0; i < it->mCount; ++i) {
-			if(it->mNodes[i].mIndex == index) {
-				it->mNodes[i].mIndex = 0xff;
+			auto& e = it->mNodes[i];
+			if(e.mIndex == index) {
+				e.invalidate();
 				foundIndex = true;
 				/* found the item and removed it */
 			}
-			if(it->mNodes[i].mIndex != 0xff) {
+			if(e.isValid()) {
 				haveEntries = true;
 			}
 			if(haveEntries && foundIndex) {
@@ -107,8 +97,8 @@ size_t HashList::find(size_t start, const Item& item)
 	const uint32_t hash_24 = item.calculateCrc32WithoutValue() & 0xffffff;
 	for(auto it = mBlockList.begin(); it != mBlockList.end(); ++it) {
 		for(size_t index = 0; index < it->mCount; ++index) {
-			HashListNode& e = it->mNodes[index];
-			if(e.mIndex >= start && e.mHash == hash_24 && e.mIndex != 0xff) {
+			auto& e = it->mNodes[index];
+			if(e.matches(start, hash_24)) {
 				return e.mIndex;
 			}
 		}
