@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "include/Nvs/Storage.hpp"
+#include "include/Nvs/Handle.hpp"
 
 #ifdef ARCH_HOST
 #include <map>
@@ -771,7 +772,7 @@ HandlePtr Storage::open_handle(const char* ns_name, OpenMode open_mode)
 		return nullptr;
 	}
 
-	auto handle = new(std::nothrow) Handle(open_mode == OpenMode::ReadOnly, nsIndex, *this);
+	auto handle = new(std::nothrow) Handle(*this, nsIndex, open_mode == OpenMode::ReadOnly);
 
 	if(handle == nullptr) {
 		mLastError = ESP_ERR_NO_MEM;

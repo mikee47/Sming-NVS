@@ -19,12 +19,14 @@
 #include "Item.hpp"
 #include "Page.hpp"
 #include "PageManager.hpp"
-#include "Handle.hpp"
 
 //extern void dumpBytes(const uint8_t* data, size_t count);
 
 namespace nvs
 {
+class Handle;
+using HandlePtr = std::unique_ptr<Handle>;
+
 class Storage : public intrusive_list_node<Storage>
 {
 	enum class State {

@@ -28,6 +28,11 @@ namespace nvs
 {
 class Storage;
 
+#define CHECK_WRITE()                                                                                                  \
+	if(mReadOnly) {                                                                                                    \
+		return ESP_ERR_NVS_READ_ONLY;                                                                                  \
+	}
+
 /**
  * @brief A handle allowing nvs-entry related operations on the NVS.
  *
@@ -36,11 +41,14 @@ class Storage;
 class Handle
 {
 public:
-	Handle(bool readOnly, uint8_t nsIndex, Storage& storage) : mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly)
+	Handle(Storage& storage, uint8_t nsIndex, bool readOnly) : mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly)
 	{
 	}
 
-	~Handle();
+	~Handle()
+	{
+		mStorage.handle_destroyed();
+	}
 
 	/**
      * @brief      set value for given key
@@ -66,8 +74,16 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-	template <typename T> esp_err_t set_item(const char* key, T value);
-	esp_err_t set_string(const char* key, const char* value);
+	template <typename T> esp_err_t set_item(const char* key, T value)
+	{
+		return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+	}
+
+	esp_err_t set_string(const char* key, const char* value)
+	{
+		CHECK_WRITE()
+		return mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value, strlen(value) + 1);
+	}
 
 	/**
      * @brief      get value for given key
@@ -89,7 +105,10 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	template <typename T> esp_err_t get_item(const char* key, T& value);
+	template <typename T> esp_err_t get_item(const char* key, T& value)
+	{
+		return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
+	}
 
 	/**
      * @brief       set variable length binary value for given key
@@ -117,7 +136,11 @@ public:
      *
      * @note compare to \ref nvs_set_blob in nvs.h
      */
-	esp_err_t set_blob(const char* key, const void* blob, size_t len);
+	esp_err_t set_blob(const char* key, const void* blob, size_t len)
+	{
+		CHECK_WRITE()
+		return mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len);
+	}
 
 	/**
      * @brief      get value for given key
@@ -147,32 +170,53 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	esp_err_t get_string(const char* key, char* out_str, size_t len);
-	esp_err_t get_blob(const char* key, void* out_blob, size_t len);
+	esp_err_t get_string(const char* key, char* out_str, size_t len)
+	{
+		return mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len);
+	}
+
+	esp_err_t get_blob(const char* key, void* out_blob, size_t len)
+	{
+		return mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len);
+	}
 
 	/**
      * @brief Looks up the size of an entry's data.
      *
      * For strings, this size includes the zero terminator.
      */
-	esp_err_t get_item_size(ItemType datatype, const char* key, size_t& size);
+	esp_err_t get_item_size(ItemType datatype, const char* key, size_t& size)
+	{
+		return mStorage.getItemDataSize(mNsIndex, datatype, key, size);
+	}
 
 	/**
      * @brief Erases an entry.
      */
-	esp_err_t erase_item(const char* key);
+	esp_err_t erase_item(const char* key)
+	{
+		CHECK_WRITE()
+		return mStorage.eraseItem(mNsIndex, key);
+	}
 
 	/**
      * Erases all entries in the scope of this handle. The scope may vary, depending on the implementation.
      *
      * @not If you want to erase the whole nvs flash (partition), refer to \ref
      */
-	esp_err_t erase_all();
+	esp_err_t erase_all()
+	{
+		CHECK_WRITE()
+		return mStorage.eraseNamespace(mNsIndex);
+	}
 
 	/**
      * Commits all changes done through this handle so far.
      */
-	esp_err_t commit();
+	esp_err_t commit()
+	{
+		return ESP_OK;
+	}
 
 	/**
      * @brief      Calculate all entries in the scope of the handle.
@@ -189,15 +233,34 @@ public:
      *             - Other error codes from the underlying storage driver.
      *               Return param used_entries will be filled 0.
      */
-	esp_err_t get_used_entry_count(size_t& usedEntries);
+	esp_err_t get_used_entry_count(size_t& usedEntries)
+	{
+		usedEntries = 0;
+		size_t used_entry_count;
+		esp_err_t err = mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count);
+		if(err == ESP_OK) {
+			usedEntries = used_entry_count;
+		}
+
+		return err;
+	}
 
 	esp_err_t getItemDataSize(ItemType datatype, const char* key, size_t& dataSize);
 
-	void debugDump();
+	void debugDump()
+	{
+		return mStorage.debugDump();
+	}
 
-	esp_err_t fillStats(nvs_stats_t& nvsStats);
+	esp_err_t fillStats(nvs_stats_t& nvsStats)
+	{
+		return mStorage.fillStats(nvsStats);
+	}
 
-	esp_err_t calcEntriesInNamespace(size_t& usedEntries);
+	esp_err_t calcEntriesInNamespace(size_t& usedEntries)
+	{
+		return mStorage.calcEntriesInNamespace(mNsIndex, usedEntries);
+	}
 
 	Storage& storage()
 	{
@@ -209,9 +272,16 @@ public:
 		return this == &other;
 	}
 
-	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize);
+	esp_err_t set_typed_item(ItemType datatype, const char* key, const void* data, size_t dataSize)
+	{
+		CHECK_WRITE()
+		return mStorage.writeItem(mNsIndex, datatype, key, data, dataSize);
+	}
 
-	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize);
+	esp_err_t get_typed_item(ItemType datatype, const char* key, void* data, size_t dataSize)
+	{
+		return mStorage.readItem(mNsIndex, datatype, key, data, dataSize);
+	}
 
 private:
 	friend class Storage;
@@ -233,16 +303,5 @@ private:
 };
 
 using HandlePtr = std::unique_ptr<Handle>;
-
-// Template Implementations
-template <typename T> esp_err_t Handle::set_item(const char* key, T value)
-{
-	return set_typed_item(itemTypeOf(value), key, &value, sizeof(value));
-}
-
-template <typename T> esp_err_t Handle::get_item(const char* key, T& value)
-{
-	return get_typed_item(itemTypeOf(value), key, &value, sizeof(value));
-}
 
 } // namespace nvs
