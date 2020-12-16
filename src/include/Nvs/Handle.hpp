@@ -75,7 +75,9 @@ public:
      *               flash operation doesn't fail again.
      *             - ESP_ERR_NVS_VALUE_TOO_LONG if the string value is too long
      */
-	template <typename T> bool setItem(const String& key, T value)
+	template <typename T>
+	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type setItem(const String& key,
+																									  T value)
 	{
 		return setTypedItem(itemTypeOf(value), key, &value, sizeof(value));
 	}
@@ -106,7 +108,9 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	template <typename T> bool getItem(const String& key, T& value)
+	template <typename T>
+	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type getItem(const String& key,
+																									  T& value)
 	{
 		return getTypedItem(itemTypeOf(value), key, &value, sizeof(value));
 	}
