@@ -13,11 +13,7 @@
 // limitations under the License.
 #include "include/Nvs/Storage.hpp"
 #include "include/Nvs/Handle.hpp"
-
-#ifdef ARCH_HOST
-#include <map>
-#include <sstream>
-#endif
+#include <WHashMap.h>
 
 namespace nvs
 {
@@ -675,33 +671,35 @@ void Storage::debugDump()
 	}
 }
 
-#ifdef ARCH_HOST
 void Storage::debugCheck()
 {
-	std::map<std::string, Page*> keys;
+	HashMap<String, Page*> keys;
 
 	for(auto p = mPageManager.begin(); p != mPageManager.end(); ++p) {
 		size_t itemIndex = 0;
 		size_t usedCount = 0;
 		Item item;
 		while(p->findItem(Page::NS_ANY, ItemType::ANY, nullptr, itemIndex, item) == ESP_OK) {
-			std::stringstream keyrepr;
-			keyrepr << static_cast<unsigned>(item.nsIndex) << "_" << static_cast<unsigned>(item.datatype) << "_"
-					<< item.key << "_" << static_cast<unsigned>(item.chunkIndex);
-			std::string keystr = keyrepr.str();
-			if(keys.find(keystr) != std::end(keys)) {
-				printf("Duplicate key: %s\n", keystr.c_str());
+			String k;
+			k += item.nsIndex;
+			k += '_';
+			k += unsigned(item.datatype);
+			k += '_';
+			k += item.key;
+			k += '_';
+			k += item.chunkIndex;
+			if(keys.contains(k)) {
+				debug_e("Duplicate key: %s", k.c_str());
 				debugDump();
-				assert(0);
+				assert(false);
 			}
-			keys.insert(std::make_pair(keystr, static_cast<Page*>(p)));
+			keys[k] = p;
 			itemIndex += item.span;
 			usedCount += item.span;
 		}
 		assert(usedCount == p->getUsedEntryCount());
 	}
 }
-#endif //ESP_PLATFORM
 
 bool Storage::fillStats(nvs_stats_t& nvsStats)
 {
