@@ -176,7 +176,7 @@ static esp_err_t nvs_get_str_or_blob(nvs_handle_t c_handle, nvs::ItemType type, 
 	auto handle = getHandle(c_handle);
 
 	size_t dataSize;
-	auto err = handle->getItemSize(type, key, dataSize);
+	auto err = handle->getItemDataSize(type, key, dataSize);
 	if(err != ESP_OK) {
 		return err;
 	}

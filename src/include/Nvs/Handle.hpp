@@ -143,6 +143,11 @@ public:
 		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
 	}
 
+	bool setBlob(const String& key, const String& blob)
+	{
+		return setBlob(key, blob.c_str(), blob.length());
+	}
+
 	/**
      * @brief      get value for given key
      *
@@ -176,9 +181,23 @@ public:
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
 	}
 
+	String getString(const String& key)
+	{
+		String s = mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key);
+		mLastError = mStorage.lastError();
+		return s;
+	}
+
 	bool getBlob(const String& key, void* out_blob, size_t len)
 	{
 		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
+	}
+
+	String getBlob(const String& key)
+	{
+		String s = mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key);
+		mLastError = mStorage.lastError();
+		return s;
 	}
 
 	/**
@@ -186,9 +205,9 @@ public:
      *
      * For strings, this size includes the zero terminator.
      */
-	bool getItemSize(ItemType datatype, const String& key, size_t& size)
+	bool getItemDataSize(ItemType datatype, const String& key, size_t& dataSize)
 	{
-		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, size));
+		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, dataSize));
 	}
 
 	/**
@@ -247,11 +266,6 @@ public:
 
 		mLastError = mStorage.lastError();
 		return false;
-	}
-
-	bool getItemDataSize(ItemType dataType, const String& key, size_t& dataSize)
-	{
-		return checkStorage(mStorage.getItemDataSize(mNsIndex, dataType, key, dataSize));
 	}
 
 	void debugDump()

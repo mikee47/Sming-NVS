@@ -309,7 +309,7 @@ esp_err_t Page::readItem(uint8_t nsIndex, ItemType datatype, const String& key, 
 	}
 
 	if(!isVariableLengthType(datatype)) {
-		if(dataSize != getAlignmentForType(datatype)) {
+		if(dataSize != getAlignment(datatype)) {
 			return ESP_ERR_NVS_TYPE_MISMATCH;
 		}
 
@@ -317,7 +317,7 @@ esp_err_t Page::readItem(uint8_t nsIndex, ItemType datatype, const String& key, 
 		return ESP_OK;
 	}
 
-	if(dataSize < static_cast<size_t>(item.varLength.dataSize)) {
+	if(dataSize < size_t(item.varLength.dataSize)) {
 		return ESP_ERR_NVS_INVALID_LENGTH;
 	}
 
@@ -361,7 +361,7 @@ esp_err_t Page::cmpItem(uint8_t nsIndex, ItemType datatype, const String& key, c
 	}
 
 	if(!isVariableLengthType(datatype)) {
-		if(dataSize != getAlignmentForType(datatype)) {
+		if(dataSize != getAlignment(datatype)) {
 			return ESP_ERR_NVS_TYPE_MISMATCH;
 		}
 
@@ -371,7 +371,7 @@ esp_err_t Page::cmpItem(uint8_t nsIndex, ItemType datatype, const String& key, c
 		return ESP_OK;
 	}
 
-	if(dataSize < static_cast<size_t>(item.varLength.dataSize)) {
+	if(dataSize < size_t(item.varLength.dataSize)) {
 		return ESP_ERR_NVS_INVALID_LENGTH;
 	}
 
@@ -763,8 +763,7 @@ esp_err_t Page::alterEntryState(size_t index, EntryState state)
 	mEntryTable.set(index, state);
 	size_t wordToWrite = mEntryTable.getWordIndex(index);
 	uint32_t word = mEntryTable.data()[wordToWrite];
-	auto rc = mPartition->write_raw(mBaseAddress + ENTRY_TABLE_OFFSET + static_cast<uint32_t>(wordToWrite) * 4, &word,
-									sizeof(word));
+	auto rc = mPartition->write_raw(mBaseAddress + ENTRY_TABLE_OFFSET + wordToWrite * 4, &word, sizeof(word));
 	if(rc != ESP_OK) {
 		mState = PageState::INVALID;
 		return rc;
@@ -787,8 +786,7 @@ esp_err_t Page::alterEntryRangeState(size_t begin, size_t end, EntryState state)
 		}
 		if(nextWordIndex != wordIndex) {
 			uint32_t word = mEntryTable.data()[wordIndex];
-			auto rc = mPartition->write_raw(mBaseAddress + ENTRY_TABLE_OFFSET + static_cast<uint32_t>(wordIndex) * 4,
-											&word, 4);
+			auto rc = mPartition->write_raw(mBaseAddress + ENTRY_TABLE_OFFSET + wordIndex * 4, &word, 4);
 			if(rc != ESP_OK) {
 				return rc;
 			}
@@ -800,7 +798,7 @@ esp_err_t Page::alterEntryRangeState(size_t begin, size_t end, EntryState state)
 
 esp_err_t Page::alterPageState(PageState state)
 {
-	uint32_t state_val = static_cast<uint32_t>(state);
+	auto state_val = uint32_t(state);
 	auto rc = mPartition->write_raw(mBaseAddress, &state_val, sizeof(state));
 	if(rc != ESP_OK) {
 		mState = PageState::INVALID;

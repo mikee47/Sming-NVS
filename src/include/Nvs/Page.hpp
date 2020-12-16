@@ -194,11 +194,6 @@ protected:
 
 	void updateFirstUsedEntry(size_t index, size_t span);
 
-	static constexpr size_t getAlignmentForType(ItemType type)
-	{
-		return static_cast<uint8_t>(type) & 0x0f;
-	}
-
 	uint32_t getEntryAddress(size_t entry) const
 	{
 		assert(entry < ENTRY_COUNT);

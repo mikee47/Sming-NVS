@@ -118,6 +118,8 @@ public:
 
 	bool readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize);
 
+	String readItem(uint8_t nsIndex, ItemType datatype, const String& key);
+
 	bool getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize);
 
 	bool eraseItem(uint8_t nsIndex, ItemType datatype, const String& key);

@@ -55,6 +55,11 @@ enum class ItemType : uint8_t {
 	ANY = NVS_TYPE_ANY
 };
 
+inline constexpr size_t getAlignment(ItemType type)
+{
+	return uint8_t(type) & 0x0f;
+}
+
 inline bool isVariableLengthType(ItemType type)
 {
 	return (type == ItemType::BLOB || type == ItemType::SZ || type == ItemType::BLOB_DATA);
@@ -137,24 +142,24 @@ public:
 	uint32_t calculateCrc32WithoutValue() const;
 	static uint32_t calculateCrc32(const uint8_t* data, size_t size);
 
-	void getKey(char* dst, size_t dstSize)
+	void getKey(char* dst, size_t dstSize) const
 	{
 		strncpy(dst, key, min(dstSize, sizeof(key)));
 		dst[dstSize - 1] = 0;
 	}
 
-	template <typename T> void getValue(T& dst)
+	template <typename T> void getValue(T& dst) const
 	{
 		assert(itemTypeOf(dst) == datatype);
-		dst = *reinterpret_cast<T*>(data);
+		dst = *reinterpret_cast<const T*>(data);
 	}
 
-	bool operator==(const String& key)
+	bool operator==(const String& key) const
 	{
 		return strncmp(key.c_str(), this->key, MAX_KEY_LENGTH) == 0;
 	}
 
-	bool operator!=(const String& key)
+	bool operator!=(const String& key) const
 	{
 		return !operator==(key);
 	}

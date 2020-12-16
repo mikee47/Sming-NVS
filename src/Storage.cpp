@@ -550,6 +550,26 @@ bool Storage::readItem(uint8_t nsIndex, ItemType datatype, const String& key, vo
 	return mLastError == ESP_OK;
 }
 
+String Storage::readItem(uint8_t nsIndex, ItemType datatype, const String& key)
+{
+	String s;
+
+	size_t dataSize{0};
+	if(getItemDataSize(nsIndex, datatype, key, dataSize)) {
+		auto len = dataSize;
+		if(datatype == ItemType::SZ && dataSize > 0) {
+			--len;
+		}
+		if(!s.setLength(len)) {
+			mLastError = ESP_ERR_NO_MEM;
+		} else if(!readItem(nsIndex, datatype, key, s.begin(), dataSize)) {
+			s = nullptr;
+		}
+	}
+
+	return s;
+}
+
 bool Storage::eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset chunkStart)
 {
 	if(mState != State::ACTIVE) {
@@ -649,6 +669,8 @@ bool Storage::eraseNamespace(uint8_t nsIndex)
 
 bool Storage::getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize)
 {
+	dataSize = 0;
+
 	if(mState != State::ACTIVE) {
 		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
