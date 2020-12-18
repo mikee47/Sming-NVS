@@ -30,7 +30,7 @@ public:
 
 	PartitionPtr lookupPartition(const String& name);
 #ifdef ENABLE_NVS_ENCRYPTION
-	PartitionPtr lookupEncryptedPartition(const String& name, const nvs_sec_cfg_t& cfg);
+	PartitionPtr lookupEncryptedPartition(const String& name, const EncryptionKey& cfg);
 #endif
 
 	bool initPartition(const String& name);
@@ -38,7 +38,7 @@ public:
 	bool initPartition(PartitionPtr& partition);
 
 #ifdef ENABLE_NVS_ENCRYPTION
-	bool secureInitPartition(const String& name, const nvs_sec_cfg_t* cfg);
+	bool secureInitPartition(const String& name, const EncryptionKey* cfg);
 #endif
 
 	bool deinitPartition(const String& name);

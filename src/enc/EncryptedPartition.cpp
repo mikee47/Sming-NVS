@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <cstring>
+#include <memory>
 #include "../include/Nvs/EncryptedPartition.hpp"
 #include "../include/Nvs/Item.hpp"
 
@@ -20,7 +21,7 @@
 
 namespace nvs
 {
-esp_err_t EncryptedPartition::init(const nvs_sec_cfg_t& cfg)
+esp_err_t EncryptedPartition::init(const EncryptionKey& cfg)
 {
 	mbedtls_aes_xts_init(&mEctxt);
 	mbedtls_aes_xts_init(&mDctxt);
@@ -47,28 +48,24 @@ esp_err_t EncryptedPartition::read(size_t src_offset, void* dst, size_t size)
 	}
 
 	// read data
-	esp_err_t read_result = Partition::read(src_offset, dst, size);
-	if(read_result != ESP_OK) {
-		return read_result;
+	esp_err_t err = Partition::read(src_offset, dst, size);
+	if(err != ESP_OK) {
+		return err;
 	}
 
 	// decrypt data
-	//sector num required as an arr by mbedtls. Should have been just uint64/32.
-	uint8_t data_unit[16];
+	uint32_t data_unit[4]{0};
 
-	uint32_t relAddr = src_offset;
+	data_unit[0] = src_offset;
 
-	memset(data_unit, 0, sizeof(data_unit));
+	auto destination = static_cast<uint8_t*>(dst);
 
-	memcpy(data_unit, &relAddr, sizeof(relAddr));
-
-	uint8_t* destination = reinterpret_cast<uint8_t*>(dst);
-
-	if(mbedtls_aes_crypt_xts(&mDctxt, MBEDTLS_AES_DECRYPT, size, data_unit, destination, destination) != 0) {
-		return ESP_ERR_NVS_XTS_DECR_FAILED;
+	if(mbedtls_aes_crypt_xts(&mDctxt, MBEDTLS_AES_DECRYPT, size, reinterpret_cast<uint8_t*>(data_unit), destination,
+							 destination) != 0) {
+		err = ESP_ERR_NVS_XTS_DECR_FAILED;
 	}
 
-	return ESP_OK;
+	return err;
 }
 
 esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
@@ -78,43 +75,28 @@ esp_err_t EncryptedPartition::write(size_t addr, const void* src, size_t size)
 	}
 
 	// copy data to buffer for encryption
-	uint8_t* buf = new(std::nothrow) uint8_t[size];
-	if(buf == nullptr) {
+	auto buf = std::unique_ptr<uint8_t[]>(new(std::nothrow) uint8_t[size]);
+	if(!buf) {
 		return ESP_ERR_NO_MEM;
 	}
 
-	memcpy(buf, src, size);
+	memcpy(buf.get(), src, size);
 
 	// encrypt data
-	uint8_t entrySize = sizeof(Item);
+	constexpr uint8_t entrySize{sizeof(Item)};
 
-	//sector num required as an arr by mbedtls. Should have been just uint64/32.
-	uint8_t data_unit[16];
+	//sector num required as an arr by mbedtls
+	uint32_t data_unit[4]{0};
 
-	/* Use relative address instead of absolute address (relocatable), so that host-generated
-     * encrypted nvs images can be used*/
-	uint32_t relAddr = addr;
-
-	memset(data_unit, 0, sizeof(data_unit));
-
-	for(uint8_t entry = 0; entry < (size / entrySize); entry++) {
-		uint32_t off = entry * entrySize;
-		uint32_t* addr_loc = (uint32_t*)&data_unit[0];
-
-		*addr_loc = relAddr + off;
-		if(mbedtls_aes_crypt_xts(&mEctxt, MBEDTLS_AES_ENCRYPT, entrySize, data_unit, buf + off, buf + off) != 0) {
-			delete buf;
-			return false;
+	for(uint32_t off = 0; off < size; off += entrySize) {
+		data_unit[0] = addr + off;
+		if(mbedtls_aes_crypt_xts(&mEctxt, MBEDTLS_AES_ENCRYPT, entrySize, reinterpret_cast<unsigned char*>(data_unit),
+								 buf.get() + off, buf.get() + off) != 0) {
 			return ESP_ERR_NVS_XTS_ENCR_FAILED;
 		}
 	}
 
-	// write data
-	esp_err_t result = Partition::write(addr, buf, size);
-
-	delete buf;
-
-	return result;
+	return Partition::write(addr, buf.get(), size);
 }
 
 } // namespace nvs

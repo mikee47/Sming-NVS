@@ -24,7 +24,7 @@ namespace nvs
 /**
  * @brief Key for encryption and decryption
  */
-struct nvs_sec_cfg_t {
+struct EncryptionKey {
 	uint8_t eky[NVS_KEY_SIZE]; /*!<  XTS encryption and decryption key*/
 	uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
 };
@@ -34,7 +34,7 @@ class EncryptedPartition : public Partition
 public:
 	using Partition::Partition;
 
-	esp_err_t init(const nvs_sec_cfg_t& cfg);
+	esp_err_t init(const EncryptionKey& cfg);
 	esp_err_t read(size_t src_offset, void* dst, size_t size) override;
 	esp_err_t write(size_t dst_offset, const void* src, size_t size) override;
 

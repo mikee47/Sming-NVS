@@ -50,7 +50,7 @@ PartitionPtr PartitionManager::lookupPartition(const String& name)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-PartitionPtr PartitionManager::lookupEncryptedPartition(const String& name, const nvs_sec_cfg_t& cfg)
+PartitionPtr PartitionManager::lookupEncryptedPartition(const String& name, const EncryptionKey& cfg)
 {
 	auto part = findPartition(name);
 	if(!part) {
@@ -135,7 +135,7 @@ bool PartitionManager::initPartition(PartitionPtr& partition)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-bool PartitionManager::secureInitPartition(const String& name, const nvs_sec_cfg_t* cfg)
+bool PartitionManager::secureInitPartition(const String& name, const EncryptionKey* cfg)
 {
 	auto container = lookupContainer(name);
 	if(container != nullptr) {
