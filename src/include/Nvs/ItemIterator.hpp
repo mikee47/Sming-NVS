@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -16,57 +16,41 @@
 
 #include <memory>
 #include "Item.hpp"
-#include "Page.hpp"
-#include "intrusive_list.h"
+#include "PageManager.hpp"
 
 namespace nvs
 {
-using TPageList = intrusive_list<Page>;
-using TPageListIterator = TPageList::iterator;
+class Container;
 
-class PageManager
+class ItemIterator : public Item
 {
 public:
-	PageManager()
+	ItemIterator(Container& container, ItemType itemType)
+: container(container), itemType(itemType)
+{
+reset();
+}
+
+	ItemIterator(Container& container, const String& nsName, ItemType itemType);
+
+	void reset();
+
+	bool next();
+
+	explicit operator bool() const
 	{
+		return page && !done;
 	}
 
-	esp_err_t load(Partition& partition);
+	String nsName() const;
 
-	TPageListIterator begin()
-	{
-		return mPageList.begin();
-	}
-
-	TPageListIterator end()
-	{
-		return mPageList.end();
-	}
-
-	Page& back()
-	{
-		return mPageList.back();
-	}
-
-	uint32_t getPageCount()
-	{
-		return mPageCount;
-	}
-
-	esp_err_t requestNewPage();
-
-	esp_err_t fillStats(nvs_stats_t& nvsStats);
-
-protected:
-	friend class Iterator;
-
-	esp_err_t activatePage();
-
-	TPageList mPageList;
-	TPageList mFreePageList;
-	std::unique_ptr<Page[]> mPages;
-	uint32_t mPageCount;
-	uint32_t mSeqNumber;
+private:
+	Container& container;
+	ItemType itemType;
+	uint8_t nsIndex{Page::NS_ANY};
+	size_t entryIndex{0};
+	TPageListIterator page;
+	bool done{false};
 };
 
 } // namespace nvs

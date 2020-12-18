@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -15,7 +15,7 @@
 #pragma once
 
 #include <memory>
-#include "Item.hpp"
+#include "ItemIterator.hpp"
 #include "Page.hpp"
 #include "PageManager.hpp"
 
@@ -24,6 +24,9 @@ namespace nvs
 class Handle;
 using HandlePtr = std::unique_ptr<Handle>;
 
+/**
+ * @brief Manages data storage within a single NVS partition
+ */
 class Container : public intrusive_list_node<Container>
 {
 	enum class State {
@@ -58,31 +61,6 @@ class Container : public intrusive_list_node<Container>
 	};
 
 	using TBlobIndexList = intrusive_list<BlobIndexNode>;
-
-	class ItemIterator : public Item
-	{
-	public:
-		ItemIterator(Container& container, const String& nsName, ItemType itemType);
-
-		void reset();
-
-		bool next();
-
-		explicit operator bool() const
-		{
-			return page && !done;
-		}
-
-		String nsName() const;
-
-	private:
-		Container& container;
-		ItemType itemType;
-		uint8_t nsIndex{Page::NS_ANY};
-		size_t entryIndex{0};
-		intrusive_list<nvs::Page>::iterator page;
-		bool done{false};
-	};
 
 public:
 	Container(PartitionPtr& partition) : mPartition(std::move(partition))
@@ -192,9 +170,9 @@ private:
 		return mPageManager.back();
 	}
 
-	bool populateBlobIndices(TBlobIndexList&);
+	bool populateBlobIndices(TBlobIndexList& blobIdxList);
 
-	void eraseOrphanDataBlobs(TBlobIndexList&);
+	void eraseOrphanDataBlobs(TBlobIndexList& blobIdxList);
 
 	bool findItem(uint8_t nsIndex, ItemType datatype, const String& key, Page*& page, Item& item,
 				  uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);

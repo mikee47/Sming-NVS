@@ -50,7 +50,7 @@ PartitionPtr PartitionManager::lookupPartition(const String& name)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-PartitionPtr PartitionManager::lookupEncryptedPartition(const String& name, const EncryptionKey& cfg)
+PartitionPtr PartitionManager::lookupPartition(const String& name, const EncryptionKey& cfg)
 {
 	auto part = findPartition(name);
 	if(!part) {

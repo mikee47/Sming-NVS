@@ -68,7 +68,7 @@ esp_err_t PageManager::load(Partition& partition)
 	}
 
 	if(lastItemIndex != SIZE_MAX) {
-		auto last = PageManager::TPageListIterator(&lastPage);
+		auto last = TPageListIterator(&lastPage);
 		TPageListIterator it;
 
 		for(it = begin(); it != last; ++it) {
