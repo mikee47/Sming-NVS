@@ -140,7 +140,7 @@ bool Container::init()
 	// Purge the blob index list
 	blobIdxList.clearAndFreeNodes();
 
-#ifdef ARCH_HOST
+#ifdef ENABLE_NVS_DEBUGCHECK
 	debugCheck();
 #endif
 
@@ -372,7 +372,8 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 			return false;
 		}
 	}
-#ifdef ARCH_HOST
+
+#ifdef ENABLE_NVS_DEBUGCHECK
 	debugCheck();
 #endif
 

@@ -167,9 +167,8 @@ esp_err_t PageManager::requestNewPage()
 
 	Page* erasedPage = maxUnusedItemsPageIt;
 
-#ifndef NDEBUG
 	size_t usedEntries = erasedPage->getUsedEntryCount();
-#endif
+
 	err = erasedPage->markFreeing();
 	if(err != ESP_OK) {
 		return err;
@@ -184,9 +183,7 @@ esp_err_t PageManager::requestNewPage()
 		return err;
 	}
 
-#ifndef NDEBUG
 	assert(usedEntries == newPage->getUsedEntryCount());
-#endif
 
 	mPageList.erase(maxUnusedItemsPageIt);
 	mFreePageList.push_back(erasedPage);
