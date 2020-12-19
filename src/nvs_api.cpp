@@ -16,6 +16,17 @@
 
 using namespace nvs;
 
+#define GET_HANDLE()                                                                                                   \
+	auto handle = getHandle(c_handle);                                                                                 \
+	if(handle == nullptr) {                                                                                            \
+		return ESP_ERR_NVS_INVALID_HANDLE;                                                                             \
+	}
+
+#define CHECK_PTR(arg)                                                                                                 \
+	if((arg) == nullptr) {                                                                                             \
+		return ESP_ERR_INVALID_ARG;                                                                                    \
+	}
+
 Handle* getHandle(nvs_handle_t c_handle)
 {
 	return reinterpret_cast<Handle*>(c_handle);
@@ -60,122 +71,124 @@ void nvs_close(nvs_handle_t c_handle)
 
 esp_err_t nvs_set_i8(nvs_handle_t c_handle, const char* key, int8_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_u8(nvs_handle_t c_handle, const char* key, uint8_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_i16(nvs_handle_t c_handle, const char* key, int16_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_u16(nvs_handle_t c_handle, const char* key, uint16_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_i32(nvs_handle_t c_handle, const char* key, int32_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_u32(nvs_handle_t c_handle, const char* key, uint32_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_i64(nvs_handle_t c_handle, const char* key, int64_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_u64(nvs_handle_t c_handle, const char* key, uint64_t value)
 {
-	return getHandle(c_handle)->setItem(key, value);
+	GET_HANDLE();
+	return handle->setItem(key, value);
 }
 
 esp_err_t nvs_set_str(nvs_handle_t c_handle, const char* key, const char* value)
 {
-	return getHandle(c_handle)->setString(key, value);
+	GET_HANDLE();
+	return handle->setString(key, value);
 }
 
 esp_err_t nvs_set_blob(nvs_handle_t c_handle, const char* key, const void* value, size_t length)
 {
-	return getHandle(c_handle)->setBlob(key, value, length);
+	GET_HANDLE();
+	return handle->setBlob(key, value, length);
 }
 
 esp_err_t nvs_get_i8(nvs_handle_t c_handle, const char* key, int8_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_u8(nvs_handle_t c_handle, const char* key, uint8_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_i16(nvs_handle_t c_handle, const char* key, int16_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_u16(nvs_handle_t c_handle, const char* key, uint16_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_i32(nvs_handle_t c_handle, const char* key, int32_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_u32(nvs_handle_t c_handle, const char* key, uint32_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_i64(nvs_handle_t c_handle, const char* key, int64_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 esp_err_t nvs_get_u64(nvs_handle_t c_handle, const char* key, uint64_t* out_value)
 {
-	if(out_value == nullptr) {
-		return ESP_ERR_INVALID_ARG;
-	}
-	return getHandle(c_handle)->getItem(key, *out_value);
+	GET_HANDLE();
+	CHECK_PTR(out_value);
+	return handle->getItem(key, *out_value);
 }
 
 static esp_err_t nvs_get_str_or_blob(nvs_handle_t c_handle, nvs::ItemType type, const char* key, void* out_value,
 									 size_t* length)
 {
-	auto handle = getHandle(c_handle);
+	GET_HANDLE();
 
 	size_t dataSize;
 	auto err = handle->getItemDataSize(type, key, dataSize);
@@ -213,15 +226,18 @@ esp_err_t nvs_get_blob(nvs_handle_t c_handle, const char* key, void* out_value, 
 
 esp_err_t nvs_erase_key(nvs_handle_t c_handle, const char* key)
 {
-	return getHandle(c_handle)->eraseItem(key);
+	GET_HANDLE();
+	return handle->eraseItem(key);
 }
 
 esp_err_t nvs_erase_all(nvs_handle_t c_handle)
 {
-	return getHandle(c_handle)->eraseAll();
+	GET_HANDLE();
+	return handle->eraseAll();
 }
 
 esp_err_t nvs_commit(nvs_handle_t c_handle)
 {
-	return getHandle(c_handle)->commit();
+	GET_HANDLE();
+	return handle->commit();
 }
