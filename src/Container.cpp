@@ -669,6 +669,11 @@ bool Container::eraseNamespace(uint8_t nsIndex)
 
 bool Container::getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize)
 {
+	if(datatype < ItemType::VARIABLE) {
+		dataSize = size_t(datatype) & NVS_TYPE_SIZE;
+		return true;
+	}
+
 	dataSize = 0;
 
 	if(mState != State::ACTIVE) {

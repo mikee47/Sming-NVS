@@ -17,17 +17,26 @@
 
 namespace nvs
 {
-ItemIterator::ItemIterator(Container& container, const String& nsName, ItemType itemType)
-	: ItemIterator(container, itemType)
+String ItemInfo::nsName() const
 {
-	done = !container.createOrOpenNamespace(nsName, false, nsIndex);
+	auto it = std::find(mContainer.namespaces().begin(), mContainer.namespaces().end(), mItem.nsIndex);
+	return it ? it->mName : nullptr;
 }
 
-void ItemIterator::reset()
+ItemIterator::ItemIterator(Container& container, const String& nsName, ItemType itemType)
+	: mItemInfo(container), mItemType(itemType)
 {
-	entryIndex = 0;
-	page = container.mPageManager.begin();
-	done = false;
+	if(nsName) {
+		mDone = !container.createOrOpenNamespace(nsName, false, mNsIndex);
+	}
+	if(!mDone) {
+		if(itemType == ItemType::UNK) {
+			mDone = true;
+		} else {
+			mPage = container.mPageManager.begin();
+			next();
+		}
+	}
 }
 
 bool ItemIterator::next()
@@ -36,36 +45,21 @@ bool ItemIterator::next()
 		return false;
 	}
 
-	auto isIterableItem = [this]() {
-		return (nsIndex != 0 && datatype != ItemType::BLOB && datatype != ItemType::BLOB_IDX);
-	};
-
-	auto isMultipageBlob = [this]() {
-		return datatype == ItemType::BLOB_DATA && chunkIndex != uint8_t(VerOffset::VER_0_OFFSET) &&
-			   chunkIndex != uint8_t(VerOffset::VER_1_OFFSET);
-	};
-
-	for(; page != container.mPageManager.end(); ++page) {
+	for(; mPage != mItemInfo.mContainer.mPageManager.end(); ++mPage) {
 		esp_err_t err;
 		do {
-			err = page->findItem(nsIndex, itemType, nullptr, entryIndex, *this);
-			entryIndex += span;
-			if(err == ESP_OK && isIterableItem() && !isMultipageBlob()) {
+			err = mPage->findItem(mNsIndex, mItemType, nullptr, mEntryIndex, mItemInfo.mItem);
+			mEntryIndex += mItemInfo.mItem.span;
+			if(err == ESP_OK && mItemInfo.isIterableItem() && !mItemInfo.isMultipageBlob()) {
 				return true;
 			}
 		} while(err != ESP_ERR_NVS_NOT_FOUND);
 
-		entryIndex = 0;
+		mEntryIndex = 0;
 	}
 
-	done = true;
+	mDone = true;
 	return false;
-}
-
-String ItemIterator::nsName() const
-{
-	auto it = std::find(container.mNamespaces.begin(), container.mNamespaces.end(), nsIndex);
-	return it ? it->mName : nullptr;
 }
 
 } // namespace nvs

@@ -34,9 +34,10 @@ enum class VerOffset : uint8_t {
 };
 
 /**
- * The possible blob types. This is a helper definition for template functions.
+ * The possible blob types
  */
 enum class ItemType : uint8_t {
+	UNK = 0,
 	U8 = NVS_TYPE_U8,
 	I8 = NVS_TYPE_I8,
 	U16 = NVS_TYPE_U16,
@@ -45,6 +46,7 @@ enum class ItemType : uint8_t {
 	I32 = NVS_TYPE_I32,
 	U64 = NVS_TYPE_U64,
 	I64 = NVS_TYPE_I64,
+	VARIABLE = 0x20, ///< Marker for start of variable-sized types
 	SZ = NVS_TYPE_STR,
 	BLOB = 0x41,
 	BLOB_DATA = NVS_TYPE_BLOB,
@@ -151,6 +153,17 @@ public:
 		dst = *reinterpret_cast<const T*>(data);
 	}
 
+	size_t dataSize() const
+	{
+		if(datatype < ItemType::VARIABLE) {
+			return size_t(datatype) & NVS_TYPE_SIZE;
+		} else if(datatype == ItemType::BLOB_IDX) {
+			return blobIndex.dataSize;
+		} else {
+			return varLength.dataSize;
+		}
+	}
+
 	bool operator==(const String& key) const
 	{
 		return strncmp(key.c_str(), this->key, MAX_KEY_LENGTH) == 0;
@@ -170,3 +183,5 @@ private:
 };
 
 } // namespace nvs
+
+String toString(nvs::ItemType itemType);

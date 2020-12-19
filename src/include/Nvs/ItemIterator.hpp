@@ -21,36 +21,128 @@
 namespace nvs
 {
 class Container;
+class ItemIterator;
 
-class ItemIterator : public Item
+class ItemInfo
 {
 public:
-	ItemIterator(Container& container, ItemType itemType)
-: container(container), itemType(itemType)
-{
-reset();
-}
+	String nsName() const;
 
-	ItemIterator(Container& container, const String& nsName, ItemType itemType);
+	String key() const
+	{
+		return mItem.key;
+	}
 
-	void reset();
+	ItemType type() const
+	{
+		return mItem.datatype;
+	}
 
-	bool next();
+	size_t dataSize() const
+	{
+		return mItem.dataSize();
+	}
 
 	explicit operator bool() const
 	{
-		return page && !done;
+		return mItem.key[0] != '\0' && mItem.datatype != ItemType::UNK;
 	}
 
-	String nsName() const;
+	bool operator==(bool b) const
+	{
+		return bool(*this) == b;
+	}
+
+	bool operator==(const ItemInfo& other) const
+	{
+		return memcmp(&mItem, &other.mItem, sizeof(mItem)) == 0;
+	}
 
 private:
-	Container& container;
-	ItemType itemType;
-	uint8_t nsIndex{Page::NS_ANY};
-	size_t entryIndex{0};
-	TPageListIterator page;
-	bool done{false};
+	friend ItemIterator;
+
+	ItemInfo(Container& container) : mContainer(container)
+	{
+	}
+
+	bool isIterableItem()
+	{
+		return (mItem.nsIndex != 0 && mItem.datatype != ItemType::BLOB && mItem.datatype != ItemType::BLOB_IDX);
+	}
+
+	bool isMultipageBlob()
+	{
+		return mItem.datatype == ItemType::BLOB_DATA && mItem.chunkIndex != uint8_t(VerOffset::VER_0_OFFSET) &&
+			   mItem.chunkIndex != uint8_t(VerOffset::VER_1_OFFSET);
+	}
+
+	Container& mContainer;
+	Item mItem;
+};
+
+class ItemIterator : public std::iterator<std::forward_iterator_tag, ItemInfo>
+{
+public:
+	ItemIterator(Container& container, const String& nsName, ItemType itemType = ItemType::ANY);
+
+	ItemIterator(Container& container, ItemType itemType) : ItemIterator(container, nullptr, itemType)
+	{
+	}
+
+	explicit operator bool() const
+	{
+		return mPage && !mDone;
+	}
+
+	ItemIterator operator++(int)
+	{
+		auto result = *this;
+		next();
+		return result;
+	}
+
+	ItemIterator& operator++()
+	{
+		next();
+		return *this;
+	}
+
+	bool operator==(const ItemIterator& other) const
+	{
+		if(mDone) {
+			return other.mDone;
+		}
+		if(other.mDone) {
+			return mDone;
+		}
+		return mPage == other.mPage && mEntryIndex == other.mEntryIndex;
+	}
+
+	bool operator!=(const ItemIterator& other) const
+	{
+		return !operator==(other);
+	}
+
+	const ItemInfo& operator*() const
+	{
+		return mItemInfo;
+	}
+
+	const ItemInfo* operator->() const
+	{
+		return mDone ? nullptr : &mItemInfo;
+	}
+
+private:
+	void reset();
+	bool next();
+
+	ItemInfo mItemInfo;
+	TPageListIterator mPage;
+	size_t mEntryIndex{0};
+	ItemType mItemType;
+	uint8_t mNsIndex{Page::NS_ANY};
+	bool mDone{false};
 };
 
 } // namespace nvs

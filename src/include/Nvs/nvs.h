@@ -26,7 +26,7 @@ namespace nvs
 /**
  * @brief Mode of opening the non-volatile storage
  */
-enum class OpenMode: uint8_t {
+enum class OpenMode : uint8_t {
 	ReadOnly,
 	ReadWrite,
 };
@@ -95,6 +95,7 @@ typedef uint32_t nvs_handle_t;
 typedef enum {
 	NVS_TYPE_UNSIGNED = 0x00,
 	NVS_TYPE_SIGNED = 0x10,
+	NVS_TYPE_SIZE = 0x0f, ///< Mask for fixed size
 
 	NVS_TYPE_U8 = NVS_TYPE_UNSIGNED | sizeof(uint8_t),   /*!< Type uint8_t */
 	NVS_TYPE_I8 = NVS_TYPE_SIGNED | sizeof(uint8_t),	 /*!< Type int8_t */

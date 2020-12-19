@@ -20,6 +20,41 @@
 #include "crc.h"
 #endif
 
+String toString(nvs::ItemType itemType)
+{
+	using Type = nvs::ItemType;
+	switch(itemType) {
+	case Type::U8:
+		return F("U8");
+	case Type::I8:
+		return F("I8");
+	case Type::U16:
+		return F("U16");
+	case Type::I16:
+		return F("I16");
+	case Type::U32:
+		return F("U32");
+	case Type::I32:
+		return F("I32");
+	case Type::U64:
+		return F("U64");
+	case Type::I64:
+		return F("I64");
+	case Type::SZ:
+		return F("STR");
+	case Type::BLOB:
+		return F("BLOB");
+	case Type::BLOB_DATA:
+		return F("BLOB_DATA");
+	case Type::BLOB_IDX:
+		return F("BLOB_IDX");
+	case Type::ANY:
+		return F("ANY");
+	default:
+		return F("UNK_") + unsigned(itemType);
+	}
+}
+
 namespace nvs
 {
 uint32_t Item::calculateCrc32() const

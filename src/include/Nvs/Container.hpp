@@ -49,6 +49,8 @@ class Container : public intrusive_list_node<Container>
 		}
 	};
 
+	using NamespaceList = intrusive_list<NamespaceEntry>;
+
 	struct UsedPageNode : public intrusive_list_node<UsedPageNode> {
 		Page* mPage;
 	};
@@ -138,9 +140,19 @@ public:
 
 	bool calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries);
 
-	ItemIterator findEntry(const String& namespace_name = nullptr, ItemType itemType = ItemType::ANY)
+	ItemIterator begin()
 	{
-		return ItemIterator(*this, namespace_name, itemType);
+		return ItemIterator(*this, ItemType::ANY);
+	}
+
+	ItemIterator end()
+	{
+		return ItemIterator(*this, ItemType::UNK);
+	}
+
+	ItemIterator find(const String& nsName = nullptr, ItemType itemType = ItemType::ANY)
+	{
+		return ItemIterator(*this, nsName, itemType);
 	}
 
 	esp_err_t lastError() const
@@ -156,6 +168,11 @@ public:
 	size_t pageCount() const
 	{
 		return mPageManager.getPageCount();
+	}
+
+	const NamespaceList& namespaces() const
+	{
+		return mNamespaces;
 	}
 
 	bool checkNoHandlesInUse();
@@ -186,7 +203,7 @@ private:
 	uint16_t mHandleCount{0};
 	uint16_t mPageCount{0};
 	PageManager mPageManager;
-	intrusive_list<NamespaceEntry> mNamespaces;
+	NamespaceList mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
 	State mState{State::INVALID};
 	esp_err_t mLastError{ESP_OK};
