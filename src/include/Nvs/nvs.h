@@ -26,7 +26,7 @@ namespace nvs
 /**
  * @brief Mode of opening the non-volatile storage
  */
-enum class OpenMode {
+enum class OpenMode: uint8_t {
 	ReadOnly,
 	ReadWrite,
 };
@@ -133,6 +133,29 @@ typedef struct {
  *      - one of the error codes from the underlying flash storage driver
  */
 esp_err_t nvs_flash_init(void);
+
+/**
+ * @brief Deinitialize NVS storage for the default NVS partition
+ *
+ * Default NVS partition is the partition with "nvs" label in the partition table.
+ *
+ * @return
+ *      - ESP_OK on success (storage was deinitialized)
+ *      - ESP_ERR_NVS_NOT_INITIALIZED if the storage was not initialized prior to this call
+ */
+esp_err_t nvs_flash_deinit(void);
+
+/**
+ * @brief Deinitialize NVS storage for the given NVS partition
+ *
+ * @param[in]  partition_label   Label of the partition
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_NVS_NOT_INITIALIZED if the storage for given partition was not
+ *        initialized prior to this call
+ */
+esp_err_t nvs_flash_deinit_partition(const char* partition_label);
 
 /**
  * @brief Erase the default NVS partition
