@@ -212,7 +212,12 @@ public:
 		return iterator(mFirst);
 	}
 
-	iterator end()
+	const iterator begin() const
+	{
+		return iterator(mFirst);
+	}
+
+	const iterator end() const
 	{
 		return iterator(nullptr);
 	}

@@ -74,10 +74,10 @@ esp_err_t Page::load(Partition& partition, uint32_t sectorNumber)
 		// check if the whole page is really empty
 		// reading the whole page takes ~40 times less than erasing it
 		const int BLOCK_SIZE = 128;
-		uint32_t* block = new(std::nothrow) uint32_t[BLOCK_SIZE];
-
-		if(!block)
+		auto block = new(std::nothrow) uint32_t[BLOCK_SIZE];
+		if(block == nullptr) {
 			return ESP_ERR_NO_MEM;
+		}
 
 		for(uint32_t i = 0; i < SPI_FLASH_SEC_SIZE; i += 4 * BLOCK_SIZE) {
 			rc = mPartition->read_raw(mBaseAddress + i, block, 4 * BLOCK_SIZE);
@@ -1012,7 +1012,7 @@ void Page::debugDump() const
 	}
 }
 
-esp_err_t Page::calcEntries(nvs_stats_t& nvsStats)
+esp_err_t Page::calcEntries(nvs_stats_t& nvsStats) const
 {
 	assert(mState != PageState::FREEING);
 

@@ -153,6 +153,11 @@ public:
 		return mHandleCount;
 	}
 
+	size_t pageCount() const
+	{
+		return mPageManager.getPageCount();
+	}
+
 	bool checkNoHandlesInUse();
 
 private:

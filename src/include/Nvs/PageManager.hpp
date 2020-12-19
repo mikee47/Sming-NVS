@@ -48,14 +48,14 @@ public:
 		return mPageList.back();
 	}
 
-	uint32_t getPageCount()
+	uint32_t getPageCount() const
 	{
 		return mPageCount;
 	}
 
 	esp_err_t requestNewPage();
 
-	esp_err_t fillStats(nvs_stats_t& nvsStats);
+	esp_err_t fillStats(nvs_stats_t& nvsStats) const;
 
 protected:
 	friend class Iterator;
