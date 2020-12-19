@@ -24,7 +24,7 @@ namespace nvs
 class Handle;
 using HandlePtr = std::unique_ptr<Handle>;
 
-class Storage : public intrusive_list_node<Storage>
+class Container : public intrusive_list_node<Container>
 {
 	enum class State {
 		INVALID,
@@ -62,7 +62,7 @@ class Storage : public intrusive_list_node<Storage>
 	class ItemIterator : public Item
 	{
 	public:
-		ItemIterator(Storage& storage, const String& nsName, ItemType itemType);
+		ItemIterator(Container& container, const String& nsName, ItemType itemType);
 
 		void reset();
 
@@ -76,7 +76,7 @@ class Storage : public intrusive_list_node<Storage>
 		String nsName() const;
 
 	private:
-		Storage& storage;
+		Container& container;
 		ItemType itemType;
 		uint8_t nsIndex{Page::NS_ANY};
 		size_t entryIndex{0};
@@ -85,11 +85,11 @@ class Storage : public intrusive_list_node<Storage>
 	};
 
 public:
-	Storage(PartitionPtr& partition) : mPartition(std::move(partition))
+	Container(PartitionPtr& partition) : mPartition(std::move(partition))
 	{
 	}
 
-	~Storage()
+	~Container()
 	{
 		assert(checkNoHandlesInUse());
 		mNamespaces.clearAndFreeNodes();
@@ -138,7 +138,7 @@ public:
 
 	bool eraseNamespace(uint8_t nsIndex);
 
-	const ::Storage::Partition& partition() const
+	const Storage::Partition& partition() const
 	{
 		return *mPartition;
 	}

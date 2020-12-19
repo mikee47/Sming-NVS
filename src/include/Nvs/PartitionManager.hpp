@@ -15,7 +15,7 @@
 #pragma once
 
 #include "Handle.hpp"
-#include "Storage.hpp"
+#include "Container.hpp"
 #include "Partition.hpp"
 #ifdef ENABLE_NVS_ENCRYPTION
 #include "EncryptedPartition.hpp"
@@ -26,7 +26,7 @@ namespace nvs
 class PartitionManager
 {
 public:
-	::Storage::Partition findPartition(const String& name);
+	Storage::Partition findPartition(const String& name);
 
 	PartitionPtr lookupPartition(const String& name);
 #ifdef ENABLE_NVS_ENCRYPTION
@@ -43,7 +43,7 @@ public:
 
 	bool deinitPartition(const String& name);
 
-	Storage* lookupStorage(const String& name);
+	Container* lookupContainer(const String& name);
 
 	HandlePtr openHandle(const String& partName, const String& nsName, OpenMode openMode);
 
@@ -53,7 +53,7 @@ public:
 	}
 
 protected:
-	intrusive_list<nvs::Storage> storage_list;
+	intrusive_list<nvs::Container> container_list;
 	esp_err_t mLastError{ESP_OK};
 };
 

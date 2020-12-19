@@ -27,10 +27,10 @@ namespace nvs
  * It is implemented as an intrusive_list_node to easily store instances of it. NVSStorage and NVSPage take pointer
  * references of this class to abstract their partition operations.
  */
-class Partition : public ::Storage::Partition
+class Partition : public Storage::Partition
 {
 public:
-	Partition(const ::Storage::Partition& part) : ::Storage::Partition(part)
+	Partition(const Storage::Partition& part) : Storage::Partition(part)
 	{
 	}
 
@@ -45,7 +45,7 @@ public:
 
 	esp_err_t read_raw(size_t offset, void* dst, size_t size)
 	{
-		return ::Storage::Partition::read(offset, dst, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
+		return Storage::Partition::read(offset, dst, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
 	}
 
 	virtual esp_err_t write(size_t offset, const void* src, size_t size)
@@ -55,7 +55,7 @@ public:
 
 	esp_err_t write_raw(size_t offset, const void* src, size_t size)
 	{
-		return ::Storage::Partition::write(offset, src, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
+		return Storage::Partition::write(offset, src, size) ? ESP_OK : ESP_ERR_FLASH_OP_FAIL;
 	}
 };
 

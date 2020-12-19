@@ -19,17 +19,17 @@ namespace nvs
 {
 PartitionManager partitionManager;
 
-::Storage::Partition PartitionManager::findPartition(const String& name)
+Storage::Partition PartitionManager::findPartition(const String& name)
 {
 	auto part = partitionTable.find(name);
 	if(!part) {
 		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
-	} else if(!part.verify(::Storage::Partition::SubType::Data::nvs)) {
+	} else if(!part.verify(Storage::Partition::SubType::Data::nvs)) {
 		mLastError = ESP_ERR_NOT_SUPPORTED;
-		part = ::Storage::Partition{};
+		part = Storage::Partition{};
 	} else if(part.isEncrypted()) {
 		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
-		part = ::Storage::Partition{};
+		part = Storage::Partition{};
 	} else {
 		mLastError = ESP_OK;
 	}
@@ -76,8 +76,8 @@ PartitionPtr PartitionManager::lookupEncryptedPartition(const String& name, cons
 
 bool PartitionManager::initPartition(const String& name)
 {
-	auto storage = lookupStorage(name);
-	if(storage != nullptr) {
+	auto container = lookupContainer(name);
+	if(container != nullptr) {
 		// Already initialised
 		return true;
 	}
@@ -102,43 +102,43 @@ bool PartitionManager::initPartition(PartitionPtr& partition)
 		return false;
 	}
 
-	auto storage = lookupStorage(partition->name());
-	if(storage == nullptr) {
-		storage = new(std::nothrow) Storage(partition);
+	auto container = lookupContainer(partition->name());
+	if(container == nullptr) {
+		container = new(std::nothrow) Container(partition);
 
-		if(storage == nullptr) {
+		if(container == nullptr) {
 			mLastError = ESP_ERR_NO_MEM;
 			return false;
 		}
 
-		if(storage->init()) {
-			storage_list.push_back(storage);
+		if(container->init()) {
+			container_list.push_back(container);
 			mLastError = ESP_OK;
 			return true;
 		}
 
-		mLastError = storage->lastError();
-		delete storage;
+		mLastError = container->lastError();
+		delete container;
 		return false;
 	}
 
-	// Storage was already initialized, don't need partition copy
+	// Container was already initialized, don't need partition copy
 	partition.reset();
 
-	if(storage->init()) {
+	if(container->init()) {
 		mLastError = ESP_OK;
 		return true;
 	}
 
-	mLastError = storage->lastError();
+	mLastError = container->lastError();
 	return false;
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
 bool PartitionManager::secureInitPartition(const String& name, const nvs_sec_cfg_t* cfg)
 {
-	auto storage = lookupStorage(name);
-	if(storage != nullptr) {
+	auto container = lookupContainer(name);
+	if(container != nullptr) {
 		return true;
 	}
 	if(mLastError == ESP_ERR_INVALID_ARG) {
@@ -156,44 +156,44 @@ bool PartitionManager::secureInitPartition(const String& name, const nvs_sec_cfg
 
 bool PartitionManager::deinitPartition(const String& name)
 {
-	Storage* storage = lookupStorage(name);
-	if(!storage) {
+	Container* container = lookupContainer(name);
+	if(!container) {
 		return true;
 	}
 
-	if(!storage->checkNoHandlesInUse()) {
-		mLastError = storage->lastError();
+	if(!container->checkNoHandlesInUse()) {
+		mLastError = container->lastError();
 		return false;
 	}
 
-	storage_list.erase(storage);
-	delete storage;
+	container_list.erase(container);
+	delete container;
 	mLastError = ESP_OK;
 	return true;
 }
 
 HandlePtr PartitionManager::openHandle(const String& partName, const String& nsName, OpenMode openMode)
 {
-	auto storage = lookupStorage(partName);
-	if(storage == nullptr) {
+	auto container = lookupContainer(partName);
+	if(container == nullptr) {
 		return nullptr;
 	}
 
-	auto handle = storage->openHandle(nsName, openMode);
-	mLastError = storage->lastError();
+	auto handle = container->openHandle(nsName, openMode);
+	mLastError = container->lastError();
 	return handle;
 }
 
-Storage* PartitionManager::lookupStorage(const String& partName)
+Container* PartitionManager::lookupContainer(const String& partName)
 {
-	if(partName.length() > ::Storage::Partition::nameSize) {
+	if(partName.length() > Storage::Partition::nameSize) {
 		mLastError = ESP_ERR_INVALID_ARG;
 		return nullptr;
 	}
 
-	auto it = find(begin(storage_list), end(storage_list), partName);
+	auto it = find(begin(container_list), end(container_list), partName);
 	mLastError = it ? ESP_OK : ESP_ERR_NVS_NOT_INITIALIZED;
-	return static_cast<Storage*>(it);
+	return static_cast<Container*>(it);
 }
 
 } // namespace nvs

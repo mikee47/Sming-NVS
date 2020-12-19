@@ -17,13 +17,13 @@
 #include <memory>
 #include "nvs.h"
 #include "Item.hpp"
-#include "Storage.hpp"
+#include "Container.hpp"
 
 class ItemIterator;
 
 namespace nvs
 {
-class Storage;
+class Container;
 
 #define CHECK_WRITE()                                                                                                  \
 	if(mReadOnly) {                                                                                                    \
@@ -39,13 +39,14 @@ class Storage;
 class Handle
 {
 public:
-	Handle(Storage& storage, uint8_t nsIndex, bool readOnly) : mStorage(storage), mNsIndex(nsIndex), mReadOnly(readOnly)
+	Handle(Container& container, uint8_t nsIndex, bool readOnly)
+		: mContainer(container), mNsIndex(nsIndex), mReadOnly(readOnly)
 	{
 	}
 
 	~Handle()
 	{
-		mStorage.handle_destroyed();
+		mContainer.handle_destroyed();
 	}
 
 	/**
@@ -82,7 +83,7 @@ public:
 	bool setString(const String& key, const String& value)
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::SZ, key, value.c_str(), value.length() + 1));
+		return check(mContainer.writeItem(mNsIndex, nvs::ItemType::SZ, key, value.c_str(), value.length() + 1));
 	}
 
 	/**
@@ -141,7 +142,7 @@ public:
 	bool setBlob(const String& key, const void* blob, size_t len)
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
+		return check(mContainer.writeItem(mNsIndex, nvs::ItemType::BLOB, key, blob, len));
 	}
 
 	bool setBlob(const String& key, const String& blob)
@@ -179,25 +180,25 @@ public:
      */
 	bool getString(const String& key, char* out_str, size_t len)
 	{
-		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
+		return check(mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
 	}
 
 	String getString(const String& key)
 	{
-		String s = mStorage.readItem(mNsIndex, nvs::ItemType::SZ, key);
-		mLastError = mStorage.lastError();
+		String s = mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key);
+		mLastError = mContainer.lastError();
 		return s;
 	}
 
 	bool getBlob(const String& key, void* out_blob, size_t len)
 	{
-		return checkStorage(mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
+		return check(mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
 	}
 
 	String getBlob(const String& key)
 	{
-		String s = mStorage.readItem(mNsIndex, nvs::ItemType::BLOB, key);
-		mLastError = mStorage.lastError();
+		String s = mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key);
+		mLastError = mContainer.lastError();
 		return s;
 	}
 
@@ -208,7 +209,7 @@ public:
      */
 	bool getItemDataSize(ItemType datatype, const String& key, size_t& dataSize)
 	{
-		return checkStorage(mStorage.getItemDataSize(mNsIndex, datatype, key, dataSize));
+		return check(mContainer.getItemDataSize(mNsIndex, datatype, key, dataSize));
 	}
 
 	/**
@@ -217,7 +218,7 @@ public:
 	bool eraseItem(const String& key)
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.eraseItem(mNsIndex, key));
+		return check(mContainer.eraseItem(mNsIndex, key));
 	}
 
 	/**
@@ -228,7 +229,7 @@ public:
 	bool eraseAll()
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.eraseNamespace(mNsIndex));
+		return check(mContainer.eraseNamespace(mNsIndex));
 	}
 
 	/**
@@ -259,34 +260,34 @@ public:
 	{
 		usedEntries = 0;
 		size_t used_entry_count;
-		if(mStorage.calcEntriesInNamespace(mNsIndex, used_entry_count)) {
+		if(mContainer.calcEntriesInNamespace(mNsIndex, used_entry_count)) {
 			usedEntries = used_entry_count;
 			mLastError = ESP_OK;
 			return true;
 		}
 
-		mLastError = mStorage.lastError();
+		mLastError = mContainer.lastError();
 		return false;
 	}
 
 	void debugDump()
 	{
-		mStorage.debugDump();
+		mContainer.debugDump();
 	}
 
 	bool fillStats(nvs_stats_t& nvsStats)
 	{
-		return checkStorage(mStorage.fillStats(nvsStats));
+		return check(mContainer.fillStats(nvsStats));
 	}
 
 	bool calcEntriesInNamespace(size_t& usedEntries)
 	{
-		return checkStorage(mStorage.calcEntriesInNamespace(mNsIndex, usedEntries));
+		return check(mContainer.calcEntriesInNamespace(mNsIndex, usedEntries));
 	}
 
-	Storage& storage()
+	Container& container()
 	{
-		return mStorage;
+		return mContainer;
 	}
 
 	bool operator==(const Handle& other) const
@@ -297,12 +298,12 @@ public:
 	bool setTypedItem(ItemType datatype, const String& key, const void* data, size_t dataSize)
 	{
 		CHECK_WRITE()
-		return checkStorage(mStorage.writeItem(mNsIndex, datatype, key, data, dataSize));
+		return check(mContainer.writeItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
 	bool getTypedItem(ItemType datatype, const String& key, void* data, size_t dataSize)
 	{
-		return checkStorage(mStorage.readItem(mNsIndex, datatype, key, data, dataSize));
+		return check(mContainer.readItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
 	esp_err_t lastError() const
@@ -311,28 +312,17 @@ public:
 	}
 
 private:
-	friend class Storage;
+	friend class Container;
 
-	bool checkStorage(bool res)
+	bool check(bool res)
 	{
 		mLastError = res ? ESP_OK : mContainer.lastError();
 		return res;
 	}
 
-	/**
-     * The underlying storage's object
-     */
-	Storage& mStorage;
-
-	/**
-     * Numeric representation of the namespace as it is saved in flash (see README.rst for further details).
-     */
-	uint8_t mNsIndex;
-
-	/**
-     * Whether this handle is marked as read-only or read-write.
-     */
-	bool mReadOnly;
+	Container& mContainer;
+	uint8_t mNsIndex; ///< Numeric representation of the namespace as it is saved in flash
+	bool mReadOnly;   ///< Whether this handle is marked as read-only or read-write
 
 	esp_err_t mLastError{ESP_OK};
 };
