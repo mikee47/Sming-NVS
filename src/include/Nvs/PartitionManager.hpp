@@ -33,15 +33,15 @@ public:
 	PartitionPtr lookupPartition(const String& name, const EncryptionKey& cfg);
 #endif
 
-	bool initPartition(const String& name);
+	bool openContainer(const String& name);
 
-	bool initPartition(PartitionPtr& partition);
+	bool openContainer(PartitionPtr& partition);
 
 #ifdef ENABLE_NVS_ENCRYPTION
-	bool secureInitPartition(const String& name, const EncryptionKey* cfg);
+	bool openContainer(const String& name, const EncryptionKey* cfg);
 #endif
 
-	bool deinitPartition(const String& name);
+	bool closeContainer(const String& name);
 
 	Container* lookupContainer(const String& name);
 
@@ -64,14 +64,14 @@ inline HandlePtr openHandle(const String& partName, const String& nsName, OpenMo
 	return partitionManager.openHandle(partName, nsName, openMode);
 }
 
-inline bool initPartition(const String& name)
+inline bool openContainer(const String& name)
 {
-	return partitionManager.initPartition(name);
+	return partitionManager.openContainer(name);
 }
 
-inline bool deinitPartition(const String& name)
+inline bool closeContainer(const String& name)
 {
-	return partitionManager.deinitPartition(name);
+	return partitionManager.closeContainer(name);
 }
 
 } // namespace nvs

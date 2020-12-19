@@ -74,7 +74,7 @@ PartitionPtr PartitionManager::lookupPartition(const String& name, const Encrypt
 
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::initPartition(const String& name)
+bool PartitionManager::openContainer(const String& name)
 {
 	auto container = lookupContainer(name);
 	if(container != nullptr) {
@@ -92,10 +92,10 @@ bool PartitionManager::initPartition(const String& name)
 		return false;
 	}
 
-	return initPartition(p);
+	return openContainer(p);
 }
 
-bool PartitionManager::initPartition(PartitionPtr& partition)
+bool PartitionManager::openContainer(PartitionPtr& partition)
 {
 	if(!partition) {
 		mLastError = ESP_ERR_INVALID_ARG;
@@ -135,7 +135,7 @@ bool PartitionManager::initPartition(PartitionPtr& partition)
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
-bool PartitionManager::secureInitPartition(const String& name, const EncryptionKey* cfg)
+bool PartitionManager::openContainer(const String& name, const EncryptionKey* cfg)
 {
 	auto container = lookupContainer(name);
 	if(container != nullptr) {
@@ -150,11 +150,11 @@ bool PartitionManager::secureInitPartition(const String& name, const EncryptionK
 		return false;
 	}
 
-	return initPartition(p);
+	return openContainer(p);
 }
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::deinitPartition(const String& name)
+bool PartitionManager::closeContainer(const String& name)
 {
 	Container* container = lookupContainer(name);
 	if(!container) {
