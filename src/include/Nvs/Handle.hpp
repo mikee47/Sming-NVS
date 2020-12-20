@@ -50,15 +50,14 @@ public:
 	}
 
 	/**
-     * @brief      set value for given key
+     * @name Set value for simple integral or enum type key
+     * @{
      *
-     * Sets value for key. Note that physical storage will not be updated until nvs_commit function is called.
+     * @brief Method template to determine storage type based on provided value
      *
      * @param[in]  key     Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
      * @param[in]  value   The value to set. Allowed types are the ones declared in ItemType as well as enums.
-     *                     For strings, the maximum length (including null character) is
-     *                     4000 bytes.
-     *                     Note that enums loose their type information when stored in NVS. Ensure that the correct
+     *                     Note that enums lose their type information when stored in NVS. Ensure that the correct
      *                     enum type is used during retrieval with \ref getItem!
      *
      * @return
@@ -77,7 +76,30 @@ public:
 	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type setItem(const String& key,
 																									  T value)
 	{
-		return setTypedItem(itemTypeOf(value), key, &value, sizeof(value));
+		return setItem(itemTypeOf(value), key, &value, sizeof(value));
+	}
+
+	/**
+	 * @brief Sets value given specific storage type
+	 */
+	bool setItem(ItemType datatype, const String& key, const void* data, size_t dataSize)
+	{
+		CHECK_WRITE()
+		return check(mContainer.writeItem(mNsIndex, datatype, key, data, dataSize));
+	}
+	/** @} */
+
+	/**
+	 * @name Set value for a String key type
+	 * @{
+	 *
+	 * Fails if key exists and is of a different type.
+     * Maximum string length (including null character) is 4000 bytes.
+	 */
+	bool setString(const String& key, const char* value)
+	{
+		CHECK_WRITE()
+		return check(mContainer.writeItem(mNsIndex, nvs::ItemType::SZ, key, value, value ? strlen(value) + 1 : 0));
 	}
 
 	bool setString(const String& key, const String& value)
@@ -85,15 +107,13 @@ public:
 		CHECK_WRITE()
 		return check(mContainer.writeItem(mNsIndex, nvs::ItemType::SZ, key, value.c_str(), value.length() + 1));
 	}
+	/** @} */
 
 	/**
-     * @brief      get value for given key
+     * @name brief      get value for given key
      *
-     * These functions retrieve value for the key, given its name. If key does not
-     * exist, or the requested variable type doesn't match the type which was used
-     * when setting a value, an error is returned.
-     *
-     * In case of any error, out_value is not modified.
+     * Fails if key does not exist or the requested variable type doesn't match the stored type.
+     * On error, `value` remains unchanged.
      *
      * @param[in]     key        Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
      * @param         value      The output value. All integral types which are declared in ItemType as well as enums
@@ -110,14 +130,20 @@ public:
 	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type getItem(const String& key,
 																									  T& value)
 	{
-		return getTypedItem(itemTypeOf(value), key, &value, sizeof(value));
+		return getItem(itemTypeOf(value), key, &value, sizeof(value));
 	}
 
+	bool getItem(ItemType datatype, const String& key, void* data, size_t dataSize)
+	{
+		return check(mContainer.readItem(mNsIndex, datatype, key, data, dataSize));
+	}
+	/** @} */
+
 	/**
-     * @brief       set variable length binary value for given key
+     * @name Set variable-length binary values (Binary Large OBject)
+     * @{
      *
-     * This family of functions set value for the key, given its name. Note that
-     * actual storage will not be updated until nvs_commit function is called.
+     * @brief       set variable length binary value for given key
      *
      * @param[in]  key     Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
      * @param[in]  blob    The blob value to set.
@@ -149,28 +175,23 @@ public:
 	{
 		return setBlob(key, blob.c_str(), blob.length());
 	}
+	/** @} */
 
 	/**
-     * @brief      get value for given key
+     * @name Read variable-length value
      *
-     * These functions retrieve the data of an entry, given its key. If key does not
-     * exist, or the requested variable type doesn't match the type which was used
-     * when setting a value, an error is returned.
+     * Fails if key does not exist or the requested variable type doesn't match the stored type.
      *
-     * In case of any error, out_value is not modified.
+     * Use getString() for reading NUL-terminated strings, and getBlob for arbitrary data structures.
      *
-     * Both functions expect out_value to be a pointer to an already allocated variable
-     * of the given type.
+     * @{
      *
-     * It is suggested that nvs_get/set_str is used for zero-terminated C strings, and
-     * get/setBlob used for arbitrary data structures.
+     * @brief Read value into user-provided buffer
      *
-     * @param[in]     key        Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
-     * @param         out_str/   Pointer to the output value.
-     *                out_blob
-     * @param[inout]  length     A non-zero pointer to the variable holding the length of out_value.
-     *                           It will be set to the actual length of the value
-     *                           written. For nvs_get_str this includes the zero terminator.
+     * @param key        Key name. Maximal length is (NVS_KEY_NAME_MAX_SIZE-1) characters. Shouldn't be empty.
+     * @param outValue   Buffer to store value. Must have sufficient room for NUL terminator.
+     *                   On error, remains unchanged.
+     * @param length     Size of buffer.
      *
      * @return
      *             - ESP_OK if the value was retrieved successfully
@@ -178,11 +199,16 @@ public:
      *             - ESP_ERR_NVS_INVALID_NAME if key name doesn't satisfy constraints
      *             - ESP_ERR_NVS_INVALID_LENGTH if length is not sufficient to store data
      */
-	bool getString(const String& key, char* out_str, size_t len)
+	bool getString(const String& key, char* outValue, size_t len)
 	{
-		return check(mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key, out_str, len));
+		return check(mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key, outValue, len));
 	}
 
+	/**
+	 * @brief Read value into String object
+	 * @param key
+	 * @retval String On error, will be invalid, i.e. bool(String) evaluates to false.
+	 */
 	String getString(const String& key)
 	{
 		String s = mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key);
@@ -190,22 +216,37 @@ public:
 		return s;
 	}
 
-	bool getBlob(const String& key, void* out_blob, size_t len)
+	/**
+	 * @brief Read BLOB value into user-provided buffer
+	 * @param key
+	 * @param outValue Buffer to store value
+	 * @param len Size of buffer
+	 * @retval bool
+	 */
+	bool getBlob(const String& key, void* outValue, size_t len)
 	{
-		return check(mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key, out_blob, len));
+		return check(mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key, outValue, len));
 	}
 
+	/**
+	 * @brief Read BLOB value into String object
+	 * @param key
+	 * @retval String
+	 */
 	String getBlob(const String& key)
 	{
 		String s = mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key);
 		mLastError = mContainer.lastError();
 		return s;
 	}
+	/** @} */
 
 	/**
-     * @brief Looks up the size of an entry's data.
-     *
-     * For strings, this size includes the zero terminator.
+     * @brief Look up the size of an entry's data
+     * @param datatype Must match the type of stored data
+     * @param key
+     * @param dataSize For strings, includes the NUL terminator
+     * @retval bool
      */
 	bool getItemDataSize(ItemType datatype, const String& key, size_t& dataSize)
 	{
@@ -213,7 +254,7 @@ public:
 	}
 
 	/**
-     * @brief Erases an entry.
+     * @brief Erases an entry
      */
 	bool eraseItem(const String& key)
 	{
@@ -222,9 +263,7 @@ public:
 	}
 
 	/**
-     * Erases all entries in the scope of this handle. The scope may vary, depending on the implementation.
-     *
-     * @not If you want to erase the whole nvs flash (partition), refer to \ref
+     * @brief Erases all entries in the current namespace
      */
 	bool eraseAll()
 	{
@@ -233,7 +272,7 @@ public:
 	}
 
 	/**
-     * Commits all changes done through this handle so far.
+     * @brief Commits all changes done through this handle so far
      */
 	bool commit()
 	{
@@ -242,13 +281,9 @@ public:
 	}
 
 	/**
-     * @brief      Calculate all entries in the scope of the handle.
-     *
-     * @param[out]  used_entries Returns amount of used entries from a namespace on success.
-     *
-     *
-     * @return
-     *             - ESP_OK if the changes have been written successfully.
+     * @brief      Determine number of used entries in the current namespace
+     * @param      usedEntries
+     * @return     - ESP_OK if the changes have been written successfully.
      *               Return param used_entries will be filled valid value.
      *             - ESP_ERR_NVS_NOT_INITIALIZED if the storage driver is not initialized.
      *               Return param used_entries will be filled 0.
@@ -259,32 +294,15 @@ public:
 	bool getUsedEntryCount(size_t& usedEntries)
 	{
 		usedEntries = 0;
-		size_t used_entry_count;
-		if(mContainer.calcEntriesInNamespace(mNsIndex, used_entry_count)) {
-			usedEntries = used_entry_count;
-			mLastError = ESP_OK;
-			return true;
-		}
-
-		mLastError = mContainer.lastError();
-		return false;
-	}
-
-	void debugDump()
-	{
-		mContainer.debugDump();
-	}
-
-	bool fillStats(nvs_stats_t& nvsStats)
-	{
-		return check(mContainer.fillStats(nvsStats));
-	}
-
-	bool calcEntriesInNamespace(size_t& usedEntries)
-	{
 		return check(mContainer.calcEntriesInNamespace(mNsIndex, usedEntries));
 	}
 
+	/**
+	 * @brief Get reference to storage container
+	 *
+	 * Can be used to perform operations on the entire storage container, not just
+	 * in the current namespace.
+	 */
 	Container& container()
 	{
 		return mContainer;
@@ -293,17 +311,6 @@ public:
 	bool operator==(const Handle& other) const
 	{
 		return this == &other;
-	}
-
-	bool setTypedItem(ItemType datatype, const String& key, const void* data, size_t dataSize)
-	{
-		CHECK_WRITE()
-		return check(mContainer.writeItem(mNsIndex, datatype, key, data, dataSize));
-	}
-
-	bool getTypedItem(ItemType datatype, const String& key, void* data, size_t dataSize)
-	{
-		return check(mContainer.readItem(mNsIndex, datatype, key, data, dataSize));
 	}
 
 	esp_err_t lastError() const
@@ -322,7 +329,7 @@ private:
 
 	Container& mContainer;
 	uint8_t mNsIndex; ///< Numeric representation of the namespace as it is saved in flash
-	bool mReadOnly;   ///< Whether this handle is marked as read-only or read-write
+	bool mReadOnly;	  ///< Whether this handle is marked as read-only or read-write
 
 	esp_err_t mLastError{ESP_OK};
 };

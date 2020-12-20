@@ -64,24 +64,23 @@ inline bool isVariableLengthType(ItemType type)
 	return (type == ItemType::BLOB || type == ItemType::SZ || type == ItemType::BLOB_DATA);
 }
 
-/**
- * Help to translate all integral types into ItemType.
- */
 template <typename T, typename std::enable_if<std::is_integral<T>::value, void*>::type = nullptr>
 constexpr ItemType itemTypeOf()
 {
 	return static_cast<ItemType>(((std::is_signed<T>::value) ? NVS_TYPE_SIGNED : NVS_TYPE_UNSIGNED) | sizeof(T));
 }
 
-/**
- * Help to translate all enum types into integral ItemType.
- */
 template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 0> constexpr ItemType itemTypeOf()
 {
 	return static_cast<ItemType>(((std::is_signed<T>::value) ? NVS_TYPE_SIGNED : NVS_TYPE_UNSIGNED) | sizeof(T));
 }
 
-template <typename T> constexpr ItemType itemTypeOf(const T&)
+/**
+ * @brief Obtain ItemType for given variable
+ * @tparam T Type of variable
+ * @param var Variable to evaluate
+ */
+template <typename T> constexpr ItemType itemTypeOf(const T& var)
 {
 	return itemTypeOf<T>();
 }
@@ -105,7 +104,7 @@ public:
 				} varLength;
 				struct {
 					uint32_t dataSize;
-					uint8_t chunkCount;   // Number of children data blobs.
+					uint8_t chunkCount;	  // Number of children data blobs.
 					VerOffset chunkStart; // Offset from which the chunkIndex for children blobs starts
 					uint16_t reserved;
 				} blobIndex;

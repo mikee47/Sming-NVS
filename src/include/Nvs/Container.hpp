@@ -75,6 +75,11 @@ public:
 		mNamespaces.clearAndFreeNodes();
 	}
 
+	/**
+	 * @brief Initialise container by reading and caching partition contents
+	 *
+	 * Fails if there are any open handles.
+	 */
 	bool init();
 
 	bool operator==(const String& part_name) const
@@ -82,64 +87,127 @@ public:
 		return *mPartition == part_name;
 	}
 
+	/**
+	 * @brief Determine if this container has been initialised successfully
+	 */
 	bool isValid() const
 	{
 		return mState == State::ACTIVE;
 	}
 
+	/**
+	 * @brief Open an existing namespace or create a new one
+	 * @param nsName Namespace to open/create
+	 * @param canCreate true if a new namespace entry may be created
+	 * @param nsIndex On return, contains index of namespace
+	 * @retval bool
+	 */
 	bool createOrOpenNamespace(const String& nsName, bool canCreate, uint8_t& nsIndex);
 
+	/**
+	 * @brief Open a new handle on this storage container
+	 * @param nsName Namespace to qualify all entries
+	 * @param openMode If read-only, all write operations will fail
+	 * @retval HandlePtr Created handle
+	 */
 	HandlePtr openHandle(const String& nsName, OpenMode openMode);
 
-	bool writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize);
-
-	bool readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize);
-
-	String readItem(uint8_t nsIndex, ItemType datatype, const String& key);
-
-	bool getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize);
-
-	bool eraseItem(uint8_t nsIndex, ItemType datatype, const String& key);
-
+	/**
+	 * @name Write an entry
+	 * @{
+	 */
 	template <typename T> bool writeItem(uint8_t nsIndex, const String& key, const T& value)
 	{
 		return writeItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
+	bool writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize);
+	/** @} */
+
+	/**
+	 * @name Read an entry
+	 * @{
+	 *
+	 * @brief Method template to read an entry and deduce the data type
+	 */
 	template <typename T> bool readItem(uint8_t nsIndex, const String& key, T& value)
 	{
 		return readItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
 	}
 
+	/**
+	 * @brief Read an item into a user-supplied buffer, specify data type explicitly
+	 */
+	bool readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize);
+
+	/**
+	 * @brief Read an item into a String object, specify data type explicitly
+	 */
+	String readItem(uint8_t nsIndex, ItemType datatype, const String& key);
+	/** @} */
+
+	/**
+	 * @brief Get size of stored value in bytes
+	 */
+	bool getItemDataSize(uint8_t nsIndex, ItemType datatype, const String& key, size_t& dataSize);
+
+	/**
+	 * @name Erase single value from container
+	 * @{
+	 *
+	 * @brief Erase item matching data type and key
+	 * @param datatype May be ItemType::ANY to match any entry
+	 * @param key May be nullptr to match any key
+	 */
+	bool eraseItem(uint8_t nsIndex, ItemType datatype, const String& key);
+
+	/**
+	 * @brief Erase item matching name only
+	 * @param key May be nullptr to match any key
+	 */
 	bool eraseItem(uint8_t nsIndex, const String& key)
 	{
 		return eraseItem(nsIndex, ItemType::ANY, key);
 	}
+	/** @} */
 
+	/**
+	 * @brief Erase all entries matching a single namespace
+	 */
 	bool eraseNamespace(uint8_t nsIndex);
 
+	/**
+	 * @brief Get reference to underlying storage partition
+	 */
 	const Storage::Partition& partition() const
 	{
 		return *mPartition;
 	}
 
-	bool writeMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize,
-							VerOffset chunkStart);
-
-	bool readMultiPageBlob(uint8_t nsIndex, const String& key, void* data, size_t dataSize);
-
-	bool cmpMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize);
-
-	bool eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset chunkStart = VerOffset::VER_ANY);
-
+	/**
+	 * @brief Print contents of container for debugging
+	 */
 	void debugDump();
 
+	/**
+	 * @brief Run extended check on container contents
+	 */
 	void debugCheck();
 
+	/**
+	 * @brief Fetch statistics for this container
+	 */
 	bool fillStats(nvs_stats_t& nvsStats);
 
+	/**
+	 * @brief Determine number of used entries for a given namespace
+	 */
 	bool calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries);
 
+	/**
+	 * @name STL iterator support
+	 * @{
+	 */
 	ItemIterator begin()
 	{
 		return ItemIterator(*this, ItemType::ANY);
@@ -154,28 +222,49 @@ public:
 	{
 		return ItemIterator(*this, nsName, itemType);
 	}
+	/** @} */
 
-	esp_err_t lastError() const
-	{
-		return mLastError;
-	}
-
+	/**
+	 * @brief Get number of open handles
+	 *
+	 * Certain container operations are prohibited whilst there are open handles.
+	 */
 	uint16_t handleCount() const
 	{
 		return mHandleCount;
 	}
 
+	/**
+	 * @brief Check and set error if any handles are in use
+	 *
+	 * Called before performing certain operations to ensure last error is set appropriately.
+	 * A debug message is also logged.
+	 */
+	bool checkNoHandlesInUse();
+
+	/**
+	 * @brief Determine number of pages in use
+	 */
 	size_t pageCount() const
 	{
 		return mPageManager.getPageCount();
 	}
 
+	/**
+	 * @brief Get reference to list of registered namespaces
+	 */
 	const NamespaceList& namespaces() const
 	{
 		return mNamespaces;
 	}
 
-	bool checkNoHandlesInUse();
+	/**
+	 * @brief Return error code from last operation
+	 */
+	esp_err_t lastError() const
+	{
+		return mLastError;
+	}
 
 private:
 	friend Handle;
@@ -198,6 +287,15 @@ private:
 
 	bool findItem(uint8_t nsIndex, ItemType datatype, const String& key, Page*& page, Item& item,
 				  uint8_t chunkIdx = Page::CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
+
+	bool writeMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize,
+							VerOffset chunkStart);
+
+	bool readMultiPageBlob(uint8_t nsIndex, const String& key, void* data, size_t dataSize);
+
+	bool cmpMultiPageBlob(uint8_t nsIndex, const String& key, const void* data, size_t dataSize);
+
+	bool eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset chunkStart = VerOffset::VER_ANY);
 
 	PartitionPtr mPartition;
 	uint16_t mHandleCount{0};
