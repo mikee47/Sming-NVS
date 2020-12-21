@@ -1,0 +1,18 @@
+language: python
+python: 3.8.6
+os: linux
+dist: focal
+jobs:
+  include:
+  - stage: build
+    env: SMING_ARCH=Esp8266 SDK_VERSION=3.0.1
+  - stage: test
+    addons:
+      apt:
+        packages:
+        - gcc-multilib
+        - g++-multilib
+    env: SMING_ARCH=Host
+git:
+  submodules: false
+script: ".travis/build-and-execute.sh"
