@@ -22,25 +22,25 @@ using namespace nvs;
 
 TEST_CASE("nvs_flash_init_partition_ptr fails due to nullptr arg", "[nvs_custom_part]")
 {
-    const uint32_t NVS_FLASH_SECTOR = 6;
-    const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-    SpiFlashEmulator emu(10);
+	const uint32_t NVS_FLASH_SECTOR = 6;
+	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
+	SpiFlashEmulator emu(10);
 
-    CHECK(nvs_flash_init_partition_ptr(nullptr) == ESP_ERR_INVALID_ARG);
+	CHECK(nvs_flash_init_partition_ptr(nullptr) == ESP_ERR_INVALID_ARG);
 }
 
 TEST_CASE("nvs_flash_init_partition_ptr inits one partition", "[nvs_custom_part]")
 {
-    const uint32_t NVS_FLASH_SECTOR = 6;
-    const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-    SpiFlashEmulator emu(10);
+	const uint32_t NVS_FLASH_SECTOR = 6;
+	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
+	SpiFlashEmulator emu(10);
 
-    esp_partition_t partition = {};
-    strcpy(partition.label, "test");
-    partition.address = NVS_FLASH_SECTOR * SPI_FLASH_SEC_SIZE;
-    partition.size = NVS_FLASH_SECTOR_COUNT_MIN * SPI_FLASH_SEC_SIZE;
+	esp_partition_t partition = {};
+	strcpy(partition.label, "test");
+	partition.address = NVS_FLASH_SECTOR * SPI_FLASH_SEC_SIZE;
+	partition.size = NVS_FLASH_SECTOR_COUNT_MIN * SPI_FLASH_SEC_SIZE;
 
-    CHECK(nvs_flash_init_partition_ptr(&partition) == ESP_OK);
-    CHECK(NVSPartitionManager::get_instance()->lookup_storage_from_name("test") != nullptr);
-    CHECK(NVSPartitionManager::get_instance()->deinit_partition("test") == ESP_OK);
+	CHECK(nvs_flash_init_partition_ptr(&partition) == ESP_OK);
+	CHECK(NVSPartitionManager::get_instance()->lookup_storage_from_name("test") != nullptr);
+	CHECK(NVSPartitionManager::get_instance()->deinit_partition("test") == ESP_OK);
 }
