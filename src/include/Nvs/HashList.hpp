@@ -41,7 +41,12 @@ public:
 	size_t find(size_t start, const Item& item);
 	void clear();
 
-protected:
+	size_t getBlockCount()
+	{
+		return mBlockList.size();
+	}
+
+private:
 	struct HashListNode {
 		uint32_t mIndex : 8;
 		uint32_t mHash : 24;

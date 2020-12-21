@@ -14,10 +14,18 @@
 
 #include "include/Nvs/Container.hpp"
 #include "include/Nvs/Handle.hpp"
+#include "include/Nvs/PartitionManager.hpp"
 #include <WHashMap.h>
 
 namespace nvs
 {
+Container::~Container()
+{
+	assert(checkNoHandlesInUse());
+	mNamespaces.clearAndFreeNodes();
+	partitionManager.invalidateContainer(this);
+}
+
 bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
 {
 	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
@@ -63,11 +71,10 @@ void Container::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
          */
 		while(p.findItem(Page::NS_ANY, ItemType::BLOB_DATA, nullptr, itemIndex, item) == ESP_OK) {
 			auto iter = std::find_if(blobIdxList.begin(), blobIdxList.end(), [=](const BlobIndexNode& e) -> bool {
-				return (strncmp(item.key, e.key, sizeof(e.key) - 1) == 0) && (item.nsIndex == e.nsIndex) &&
-					   (item.chunkIndex >= uint8_t(e.chunkStart)) &&
+				return (item == e.key) && (item.nsIndex == e.nsIndex) && (item.chunkIndex >= uint8_t(e.chunkStart)) &&
 					   (item.chunkIndex < uint8_t(e.chunkStart) + e.chunkCount);
 			});
-			if(iter == std::end(blobIdxList)) {
+			if(!iter) {
 				p.eraseItem(item.nsIndex, item.datatype, item.key, item.chunkIndex);
 			}
 			itemIndex += item.span;
@@ -273,7 +280,7 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		return false;
 	}
 
-	Page* findPage = nullptr;
+	Page* findPage{nullptr};
 	Item item;
 
 	if(!findItem(nsIndex, (datatype == ItemType::BLOB) ? ItemType::BLOB_IDX : datatype, key, findPage, item)) {
@@ -294,7 +301,7 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 			}
 
 			if(findPage->state() == Page::PageState::UNINITIALIZED || findPage->state() == Page::PageState::INVALID) {
-				ESP_ERROR_CHECK(findItem(nsIndex, datatype, key, findPage, item));
+				assert(findItem(nsIndex, datatype, key, findPage, item));
 			}
 			/* Get the version of the previous index with same <ns,key> */
 			prevStart = item.blobIndex.chunkStart;
@@ -315,6 +322,9 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		if(findPage) {
 			/* Erase the blob with earlier version*/
 			if(!eraseMultiPageBlob(nsIndex, key, prevStart)) {
+				if(mLastError == ESP_ERR_FLASH_OP_FAIL) {
+					mLastError = ESP_ERR_NVS_REMOVE_FAILED;
+				}
 				return false;
 			}
 
@@ -365,10 +375,13 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 
 	if(findPage) {
 		if(findPage->state() == Page::PageState::UNINITIALIZED || findPage->state() == Page::PageState::INVALID) {
-			ESP_ERROR_CHECK(findItem(nsIndex, datatype, key, findPage, item));
+			assert(findItem(nsIndex, datatype, key, findPage, item));
 		}
 		mLastError = findPage->eraseItem(nsIndex, datatype, key);
 		if(mLastError != ESP_OK) {
+			if(mLastError == ESP_ERR_FLASH_OP_FAIL) {
+				mLastError = ESP_ERR_NVS_REMOVE_FAILED;
+			}
 			return false;
 		}
 	}

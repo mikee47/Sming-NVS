@@ -19,16 +19,6 @@
 
 namespace nvs
 {
-#define NVS_KEY_SIZE 32 // AES-256
-
-/**
- * @brief Key for encryption and decryption
- */
-struct EncryptionKey {
-	uint8_t eky[NVS_KEY_SIZE]; /*!<  XTS encryption and decryption key*/
-	uint8_t tky[NVS_KEY_SIZE]; /*!<  XTS tweak key */
-};
-
 class EncryptedPartition : public Partition
 {
 public:

@@ -76,7 +76,14 @@ public:
 	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type setItem(const String& key,
 																									  T value)
 	{
-		return setItem(itemTypeOf(value), key, &value, sizeof(value));
+		return setItem(itemTypeOf(value), key, value);
+	}
+
+	template <typename T>
+	typename std::enable_if<std::is_integral<T>::value || std::is_enum<T>::value, bool>::type
+	setItem(ItemType datatype, const String& key, T value)
+	{
+		return setItem(datatype, key, &value, sizeof(value));
 	}
 
 	/**
@@ -329,7 +336,7 @@ private:
 
 	Container& mContainer;
 	uint8_t mNsIndex; ///< Numeric representation of the namespace as it is saved in flash
-	bool mReadOnly;	  ///< Whether this handle is marked as read-only or read-write
+	bool mReadOnly;   ///< Whether this handle is marked as read-only or read-write
 
 	esp_err_t mLastError{ESP_OK};
 };

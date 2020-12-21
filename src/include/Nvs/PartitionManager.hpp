@@ -48,12 +48,14 @@ public:
 	 * @name Open storage container
 	 * @{
 	 */
-	bool openContainer(const String& name);
-
-	bool openContainer(PartitionPtr& partition);
-
+	Container* openContainer(const String& partitionName);
+	Container* openContainer(PartitionPtr&& partition);
+	Container* openContainer(PartitionPtr& partition)
+	{
+		return openContainer(std::move(partition));
+	}
 #ifdef ENABLE_NVS_ENCRYPTION
-	bool openContainer(const String& name, const EncryptionKey* cfg);
+	Container* openContainer(const String& name, const EncryptionKey* cfg);
 #endif
 	/** @} */
 
@@ -81,6 +83,20 @@ public:
 	HandlePtr openHandle(const String& partName, const String& nsName, OpenMode openMode);
 
 	/**
+	 * @brief Get number of open handles
+	 *
+	 * Certain container operations are prohibited whilst there are open handles.
+	 */
+	size_t handleCount() const
+	{
+		size_t count{0};
+		for(auto& c : container_list) {
+			count += c.handleCount();
+		}
+		return count;
+	}
+
+	/**
 	 * @brief Fetch error code for last operation
 	 */
 	esp_err_t lastError() const
@@ -88,7 +104,16 @@ public:
 		return mLastError;
 	}
 
-protected:
+private:
+	friend Container;
+
+	void invalidateContainer(Container* container)
+	{
+		container_list.erase(container);
+	}
+
+	bool verify(Storage::Partition& part);
+
 	intrusive_list<nvs::Container> container_list;
 	esp_err_t mLastError{ESP_OK};
 };

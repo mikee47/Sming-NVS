@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "include/Nvs/PartitionManager.hpp"
-#include <Storage/PartitionTable.h>
+#include <Storage.h>
 
 namespace nvs
 {
@@ -21,20 +21,31 @@ PartitionManager partitionManager;
 
 Storage::Partition PartitionManager::findPartition(const String& name)
 {
-	auto part = partitionTable.find(name);
-	if(!part) {
-		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
-	} else if(!part.verify(Storage::Partition::SubType::Data::nvs)) {
-		mLastError = ESP_ERR_NOT_SUPPORTED;
+	auto part = Storage::findPartition(name);
+	if(!verify(part)) {
 		part = Storage::Partition{};
-	} else if(part.isEncrypted()) {
-		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
-		part = Storage::Partition{};
-	} else {
-		mLastError = ESP_OK;
 	}
 
 	return part;
+}
+
+bool PartitionManager::verify(Storage::Partition& part)
+{
+	if(!part) {
+		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
+		return false;
+	}
+	if(!part.verify(Storage::Partition::SubType::Data::nvs)) {
+		mLastError = ESP_ERR_NOT_SUPPORTED;
+		return false;
+	}
+	if(part.isEncrypted()) {
+		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
+		return false;
+	}
+
+	mLastError = ESP_OK;
+	return true;
 }
 
 PartitionPtr PartitionManager::lookupPartition(const String& name)
@@ -74,64 +85,80 @@ PartitionPtr PartitionManager::lookupPartition(const String& name, const Encrypt
 
 #endif // ENABLE_NVS_ENCRYPTION
 
-bool PartitionManager::openContainer(const String& name)
+Container* PartitionManager::openContainer(const String& partitionName)
 {
-	auto container = lookupContainer(name);
+	auto container = lookupContainer(partitionName);
 	if(container != nullptr) {
 		// Already initialised
-		return true;
+		return container;
 	}
 	if(mLastError == ESP_ERR_INVALID_ARG) {
-		return false;
+		return nullptr;
 	}
 
 	static_assert(SPI_FLASH_SEC_SIZE != 0, "Invalid SPI_FLASH_SEC_SIZE");
 
-	auto p = lookupPartition(name);
+	auto p = lookupPartition(partitionName);
 	if(!p) {
-		return false;
+		return nullptr;
 	}
 
 	return openContainer(p);
 }
 
-bool PartitionManager::openContainer(PartitionPtr& partition)
+/*
+Container* PartitionManager::openContainer(Storage::Partition& part)
+{
+	auto container = lookupContainer(part.name());
+	if(container != nullptr) {
+		// Already initialised
+		return container;
+	}
+	if(mLastError == ESP_ERR_INVALID_ARG) {
+		return nullptr;
+	}
+	if(!verify(part)) {
+		return nullptr;
+	}
+
+	PartitionPtr partition(new(std::nothrow) Partition(part));
+	if(!partition) {
+		mLastError = ESP_ERR_NO_MEM;
+		return nullptr;
+	}
+
+	return openContainer(partition);
+}
+*/
+
+Container* PartitionManager::openContainer(PartitionPtr&& partition)
 {
 	if(!partition) {
 		mLastError = ESP_ERR_INVALID_ARG;
-		return false;
+		return nullptr;
 	}
 
 	auto container = lookupContainer(partition->name());
-	if(container == nullptr) {
-		container = new(std::nothrow) Container(partition);
-
-		if(container == nullptr) {
-			mLastError = ESP_ERR_NO_MEM;
-			return false;
-		}
-
-		if(container->init()) {
-			container_list.push_back(container);
-			mLastError = ESP_OK;
-			return true;
-		}
-
-		mLastError = container->lastError();
-		delete container;
-		return false;
+	if(container != nullptr) {
+		return container;
 	}
 
-	// Container was already initialized, don't need partition copy
-	partition.reset();
+	container = new(std::nothrow) Container(partition);
+
+	if(container == nullptr) {
+		mLastError = ESP_ERR_NO_MEM;
+		return nullptr;
+	}
 
 	if(container->init()) {
+		container_list.push_back(container);
 		mLastError = ESP_OK;
-		return true;
+		return container;
 	}
 
 	mLastError = container->lastError();
-	return false;
+	delete container;
+	return nullptr;
 }
 
 #ifdef ENABLE_NVS_ENCRYPTION
@@ -166,7 +193,6 @@ bool PartitionManager::closeContainer(const String& name)
 		return false;
 	}
 
-	container_list.erase(container);
 	delete container;
 	mLastError = ESP_OK;
 	return true;
@@ -191,7 +217,7 @@ Container* PartitionManager::lookupContainer(const String& partName)
 		return nullptr;
 	}
 
-	auto it = find(begin(container_list), end(container_list), partName);
+	auto it = find(container_list.begin(), container_list.end(), partName);
 	mLastError = it ? ESP_OK : ESP_ERR_NVS_NOT_INITIALIZED;
 	return static_cast<Container*>(it);
 }

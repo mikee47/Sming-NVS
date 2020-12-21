@@ -93,14 +93,34 @@ public:
 	esp_err_t writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 						uint8_t chunkIdx = CHUNK_ANY);
 
+	template <typename T> esp_err_t writeItem(uint8_t nsIndex, const String& key, const T& value)
+	{
+		return writeItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
+	}
+
 	esp_err_t readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize,
 					   uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
+
+	template <typename T> esp_err_t readItem(uint8_t nsIndex, const String& key, T& value)
+	{
+		return readItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
+	}
 
 	esp_err_t cmpItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize,
 					  uint8_t chunkIdx = CHUNK_ANY, VerOffset chunkStart = VerOffset::VER_ANY);
 
+	template <typename T> esp_err_t cmpItem(uint8_t nsIndex, const String& key, const T& value)
+	{
+		return cmpItem(nsIndex, itemTypeOf(value), key, &value, sizeof(value));
+	}
+
 	esp_err_t eraseItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx = CHUNK_ANY,
 						VerOffset chunkStart = VerOffset::VER_ANY);
+
+	template <typename T> esp_err_t eraseItem(uint8_t nsIndex, const String& key)
+	{
+		return eraseItem(nsIndex, itemTypeOf<T>(), key);
+	}
 
 	esp_err_t findItem(uint8_t nsIndex, ItemType datatype, const String& key, uint8_t chunkIdx = CHUNK_ANY,
 					   VerOffset chunkStart = VerOffset::VER_ANY);

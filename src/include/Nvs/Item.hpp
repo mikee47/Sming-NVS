@@ -17,8 +17,6 @@
 #include "nvs.h"
 #include <WString.h>
 
-using namespace std;
-
 namespace nvs
 {
 /**
@@ -47,7 +45,8 @@ enum class ItemType : uint8_t {
 	U64 = NVS_TYPE_U64,
 	I64 = NVS_TYPE_I64,
 	VARIABLE = 0x20, ///< Marker for start of variable-sized types
-	SZ = NVS_TYPE_STR,
+	STR = NVS_TYPE_STR,
+	SZ = STR,
 	BLOB = 0x41,
 	BLOB_DATA = NVS_TYPE_BLOB,
 	BLOB_IDX = 0x48,
@@ -104,7 +103,7 @@ public:
 				} varLength;
 				struct {
 					uint32_t dataSize;
-					uint8_t chunkCount;	  // Number of children data blobs.
+					uint8_t chunkCount;   // Number of children data blobs.
 					VerOffset chunkStart; // Offset from which the chunkIndex for children blobs starts
 					uint16_t reserved;
 				} blobIndex;
@@ -125,7 +124,7 @@ public:
 		init();
 		if(key_.length() > 0) {
 			strncpy(key, key_.c_str(), sizeof(key) - 1);
-			key[sizeof(key) - 1] = 0;
+			key[sizeof(key) - 1] = '\0';
 		} else {
 			key[0] = '\0';
 		}
@@ -142,7 +141,7 @@ public:
 
 	void getKey(char* dst, size_t dstSize) const
 	{
-		strncpy(dst, key, min(dstSize, sizeof(key)));
+		strncpy(dst, key, std::min(dstSize, sizeof(key)));
 		dst[dstSize - 1] = 0;
 	}
 

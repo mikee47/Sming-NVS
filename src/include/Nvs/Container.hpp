@@ -65,15 +65,15 @@ class Container : public intrusive_list_node<Container>
 	using TBlobIndexList = intrusive_list<BlobIndexNode>;
 
 public:
+	Container(PartitionPtr&& partition) : mPartition(std::move(partition))
+	{
+	}
+
 	Container(PartitionPtr& partition) : mPartition(std::move(partition))
 	{
 	}
 
-	~Container()
-	{
-		assert(checkNoHandlesInUse());
-		mNamespaces.clearAndFreeNodes();
-	}
+	~Container();
 
 	/**
 	 * @brief Initialise container by reading and caching partition contents
@@ -179,8 +179,9 @@ public:
 	/**
 	 * @brief Get reference to underlying storage partition
 	 */
-	const Storage::Partition& partition() const
+	Partition& partition() const
 	{
+		assert(mPartition != nullptr);
 		return *mPartition;
 	}
 
@@ -229,7 +230,7 @@ public:
 	 *
 	 * Certain container operations are prohibited whilst there are open handles.
 	 */
-	uint16_t handleCount() const
+	size_t handleCount() const
 	{
 		return mHandleCount;
 	}

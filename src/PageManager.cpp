@@ -22,7 +22,7 @@ esp_err_t PageManager::load(Partition& partition)
 	mPageList.clear();
 	mFreePageList.clear();
 
-	mPages.reset(new(nothrow) Page[mPageCount]);
+	mPages.reset(new(std::nothrow) Page[mPageCount]);
 	if(!mPages) {
 		return ESP_ERR_NO_MEM;
 	}
