@@ -8,7 +8,7 @@ The Non-volatile storage (NVS) library is designed to store key-value pairs in f
 This is a port of the Espressif Esp32 IDF `nvs_flash` library for Sming. It differs from the original in several ways:
 
 -  Reworked to provide a consistent C++ interface
--  Methods return ``bool``; if required, error codes can be obtained via ``lastError()``
+-  Methods return ``bool``, and error code for last operation can be obtained via ``nvs_errno``
 -  IDF `nvs::Storage` has been renamed as `Container`; this handles data for a single :cpp:class:`Storage::Partition`.
 -  Containers may not be closed or erased if there are open handles - calls will fail.
    (IDF allows this, but invalidates all open handles in the process.

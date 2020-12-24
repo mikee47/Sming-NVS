@@ -27,7 +27,7 @@ class Container;
 
 #define CHECK_WRITE()                                                                                                  \
 	if(mReadOnly) {                                                                                                    \
-		mLastError = ESP_ERR_NVS_READ_ONLY;                                                                            \
+		nvs_errno = ESP_ERR_NVS_READ_ONLY;                                                                             \
 		return false;                                                                                                  \
 	}
 
@@ -218,9 +218,7 @@ public:
 	 */
 	String getString(const String& key)
 	{
-		String s = mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key);
-		mLastError = mContainer.lastError();
-		return s;
+		return mContainer.readItem(mNsIndex, nvs::ItemType::SZ, key);
 	}
 
 	/**
@@ -242,9 +240,7 @@ public:
 	 */
 	String getBlob(const String& key)
 	{
-		String s = mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key);
-		mLastError = mContainer.lastError();
-		return s;
+		return mContainer.readItem(mNsIndex, nvs::ItemType::BLOB, key);
 	}
 	/** @} */
 
@@ -283,7 +279,7 @@ public:
      */
 	bool commit()
 	{
-		mLastError = ESP_OK;
+		nvs_errno = ESP_OK;
 		return true;
 	}
 
@@ -320,25 +316,20 @@ public:
 		return this == &other;
 	}
 
-	esp_err_t lastError() const
-	{
-		return mLastError;
-	}
-
 private:
 	friend class Container;
 
 	bool check(bool res)
 	{
-		mLastError = res ? ESP_OK : mContainer.lastError();
+		if(res) {
+			assert(nvs_errno == ESP_OK);
+		}
 		return res;
 	}
 
 	Container& mContainer;
 	uint8_t mNsIndex; ///< Numeric representation of the namespace as it is saved in flash
 	bool mReadOnly;   ///< Whether this handle is marked as read-only or read-write
-
-	esp_err_t mLastError{ESP_OK};
 };
 
 using HandlePtr = std::unique_ptr<Handle>;

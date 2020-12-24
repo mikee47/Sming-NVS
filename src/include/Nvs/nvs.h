@@ -483,6 +483,8 @@ esp_err_t nvs_commit(nvs_handle_t handle);
  */
 void nvs_close(nvs_handle_t handle);
 
+extern int nvs_errno;
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

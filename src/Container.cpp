@@ -40,7 +40,7 @@ bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
 		while(p.findItem(Page::NS_ANY, ItemType::BLOB_IDX, nullptr, itemIndex, item) == ESP_OK) {
 			auto entry = new(std::nothrow) BlobIndexNode;
 			if(entry == nullptr) {
-				mLastError = ESP_ERR_NO_MEM;
+				nvs_errno = ESP_ERR_NO_MEM;
 				return false;
 			}
 
@@ -54,7 +54,7 @@ bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
 		}
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
@@ -85,12 +85,12 @@ void Container::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
 bool Container::checkNoHandlesInUse()
 {
 	if(mHandleCount == 0) {
-		mLastError = ESP_OK;
+		nvs_errno = ESP_OK;
 		return true;
 	}
 
 	debug_e("Handles in use, cannot init");
-	mLastError = ESP_ERR_NVS_INVALID_STATE;
+	nvs_errno = ESP_ERR_NVS_INVALID_STATE;
 	return false;
 }
 
@@ -101,8 +101,8 @@ bool Container::init()
 		return false;
 	}
 
-	mLastError = mPageManager.load(*mPartition);
-	if(mLastError != ESP_OK) {
+	nvs_errno = mPageManager.load(*mPartition);
+	if(nvs_errno != ESP_OK) {
 		mState = State::INVALID;
 		return false;
 	}
@@ -119,7 +119,7 @@ bool Container::init()
 
 			if(!entry) {
 				mState = State::INVALID;
-				mLastError = ESP_ERR_NO_MEM;
+				nvs_errno = ESP_ERR_NO_MEM;
 				return false;
 			}
 
@@ -151,7 +151,7 @@ bool Container::init()
 	debugCheck();
 #endif
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
@@ -160,14 +160,14 @@ bool Container::findItem(uint8_t nsIndex, ItemType datatype, const String& key, 
 {
 	for(auto it = std::begin(mPageManager); it != std::end(mPageManager); ++it) {
 		size_t itemIndex = 0;
-		mLastError = it->findItem(nsIndex, datatype, key, itemIndex, item, chunkIdx, chunkStart);
-		if(mLastError == ESP_OK) {
+		nvs_errno = it->findItem(nsIndex, datatype, key, itemIndex, item, chunkIdx, chunkStart);
+		if(nvs_errno == ESP_OK) {
 			page = it;
 			return true;
 		}
 	}
 
-	mLastError = ESP_ERR_NVS_NOT_FOUND;
+	nvs_errno = ESP_ERR_NVS_NOT_FOUND;
 	return false;
 }
 
@@ -178,7 +178,7 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 	uint32_t max_pages = std::min(mPageManager.getPageCount() - 1, (Page::CHUNK_ANY - 1) / 2U);
 
 	if(dataSize > max_pages * Page::CHUNK_MAX_SIZE) {
-		mLastError = ESP_ERR_NVS_VALUE_TOO_LONG;
+		nvs_errno = ESP_ERR_NVS_VALUE_TOO_LONG;
 		return false;
 	}
 
@@ -194,23 +194,24 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 		if(!chunkCount && tailroom < dataSize && tailroom < Page::CHUNK_MAX_SIZE / 10) {
 			/** This is the first chunk and tailroom is too small ***/
 			if(page.state() != Page::PageState::FULL) {
-				mLastError = page.markFull();
-				if(mLastError != ESP_OK) {
+				nvs_errno = page.markFull();
+				if(nvs_errno != ESP_OK) {
 					return false;
 				}
 			}
-			mLastError = mPageManager.requestNewPage();
-			if(mLastError != ESP_OK) {
+			nvs_errno = mPageManager.requestNewPage();
+			if(nvs_errno != ESP_OK) {
 				return false;
-			} else if(getCurrentPage().getVarDataTailroom() == tailroom) {
-				/* We got the same page or we are not improving.*/
-				mLastError = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
-				return false;
-			} else {
-				continue;
 			}
-		} else if(!tailroom) {
-			mLastError = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
+			if(getCurrentPage().getVarDataTailroom() == tailroom) {
+				/* We got the same page or we are not improving.*/
+				nvs_errno = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
+				return false;
+			}
+			continue;
+		}
+		if(tailroom == 0) {
+			nvs_errno = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
 			break;
 		}
 
@@ -219,30 +220,30 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 		chunkSize = (remainingSize > tailroom) ? tailroom : remainingSize;
 		remainingSize -= chunkSize;
 
-		mLastError = page.writeItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<const uint8_t*>(data) + offset,
-									chunkSize, uint8_t(chunkStart) + chunkCount);
+		nvs_errno = page.writeItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<const uint8_t*>(data) + offset,
+								   chunkSize, uint8_t(chunkStart) + chunkCount);
 		chunkCount++;
-		assert(mLastError != ESP_ERR_NVS_PAGE_FULL);
-		if(mLastError != ESP_OK) {
+		assert(nvs_errno != ESP_ERR_NVS_PAGE_FULL);
+		if(nvs_errno != ESP_OK) {
 			break;
 		}
 
 		auto node = new(std::nothrow) UsedPageNode;
 		if(node == nullptr) {
-			mLastError = ESP_ERR_NO_MEM;
+			nvs_errno = ESP_ERR_NO_MEM;
 			break;
 		}
 		node->mPage = &page;
 		usedPages.push_back(node);
 		if(remainingSize != 0 || (tailroom - chunkSize) < Page::ENTRY_SIZE) {
 			if(page.state() != Page::PageState::FULL) {
-				mLastError = page.markFull();
-				if(mLastError != ESP_OK) {
+				nvs_errno = page.markFull();
+				if(nvs_errno != ESP_OK) {
 					break;
 				}
 			}
-			mLastError = mPageManager.requestNewPage();
-			if(mLastError != ESP_OK) {
+			nvs_errno = mPageManager.requestNewPage();
+			if(nvs_errno != ESP_OK) {
 				break;
 			}
 		}
@@ -255,13 +256,13 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 			item.blobIndex.chunkCount = chunkCount;
 			item.blobIndex.chunkStart = chunkStart;
 
-			mLastError = getCurrentPage().writeItem(nsIndex, ItemType::BLOB_IDX, key, item.data, sizeof(item.data));
-			assert(mLastError != ESP_ERR_NVS_PAGE_FULL);
+			nvs_errno = getCurrentPage().writeItem(nsIndex, ItemType::BLOB_IDX, key, item.data, sizeof(item.data));
+			assert(nvs_errno != ESP_ERR_NVS_PAGE_FULL);
 			break;
 		}
 	} while(true);
 
-	if(mLastError != ESP_OK) {
+	if(nvs_errno != ESP_OK) {
 		/* Anything failed, then we should erase all the written chunks*/
 		int ii = 0;
 		for(auto it = std::begin(usedPages); it != std::end(usedPages); it++) {
@@ -270,13 +271,13 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 	}
 	usedPages.clearAndFreeNodes();
 
-	return mLastError == ESP_OK;
+	return nvs_errno == ESP_OK;
 }
 
 bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key, const void* data, size_t dataSize)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -284,7 +285,7 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 	Item item;
 
 	if(!findItem(nsIndex, (datatype == ItemType::BLOB) ? ItemType::BLOB_IDX : datatype, key, findPage, item)) {
-		if(mLastError != ESP_ERR_NVS_NOT_FOUND) {
+		if(nvs_errno != ESP_ERR_NVS_NOT_FOUND) {
 			return false;
 		}
 	}
@@ -313,8 +314,8 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 
 		/* Write the blob with new version*/
 		if(!writeMultiPageBlob(nsIndex, key, data, dataSize, nextStart)) {
-			if(mLastError == ESP_ERR_NVS_PAGE_FULL) {
-				mLastError = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
+			if(nvs_errno == ESP_ERR_NVS_PAGE_FULL) {
+				nvs_errno = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
 			}
 			return false;
 		}
@@ -322,8 +323,8 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		if(findPage) {
 			/* Erase the blob with earlier version*/
 			if(!eraseMultiPageBlob(nsIndex, key, prevStart)) {
-				if(mLastError == ESP_ERR_FLASH_OP_FAIL) {
-					mLastError = ESP_ERR_NVS_REMOVE_FAILED;
+				if(nvs_errno == ESP_ERR_FLASH_OP_FAIL) {
+					nvs_errno = ESP_ERR_NVS_REMOVE_FAILED;
 				}
 				return false;
 			}
@@ -332,7 +333,7 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		} else {
 			/* Support for earlier versions where BLOBS were stored without index */
 			if(!findItem(nsIndex, datatype, key, findPage, item)) {
-				if(mLastError != ESP_ERR_NVS_NOT_FOUND) {
+				if(nvs_errno != ESP_ERR_NVS_NOT_FOUND) {
 					return false;
 				}
 			}
@@ -342,33 +343,33 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		// If it isn't, it is cheaper to purposefully not write out new data.
 		// since it may invoke an erasure of flash.
 		if(findPage != nullptr && findPage->cmpItem(nsIndex, datatype, key, data, dataSize) == ESP_OK) {
-			mLastError = ESP_OK;
+			nvs_errno = ESP_OK;
 			return true;
 		}
 
 		Page& page = getCurrentPage();
-		mLastError = page.writeItem(nsIndex, datatype, key, data, dataSize);
-		if(mLastError == ESP_ERR_NVS_PAGE_FULL) {
+		nvs_errno = page.writeItem(nsIndex, datatype, key, data, dataSize);
+		if(nvs_errno == ESP_ERR_NVS_PAGE_FULL) {
 			if(page.state() != Page::PageState::FULL) {
-				mLastError = page.markFull();
-				if(mLastError != ESP_OK) {
+				nvs_errno = page.markFull();
+				if(nvs_errno != ESP_OK) {
 					return false;
 				}
 			}
-			mLastError = mPageManager.requestNewPage();
-			if(mLastError != ESP_OK) {
+			nvs_errno = mPageManager.requestNewPage();
+			if(nvs_errno != ESP_OK) {
 				return false;
 			}
 
-			mLastError = getCurrentPage().writeItem(nsIndex, datatype, key, data, dataSize);
-			if(mLastError == ESP_ERR_NVS_PAGE_FULL) {
-				mLastError = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
+			nvs_errno = getCurrentPage().writeItem(nsIndex, datatype, key, data, dataSize);
+			if(nvs_errno == ESP_ERR_NVS_PAGE_FULL) {
+				nvs_errno = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
 				return false;
 			}
-			if(mLastError != ESP_OK) {
+			if(nvs_errno != ESP_OK) {
 				return false;
 			}
-		} else if(mLastError != ESP_OK) {
+		} else if(nvs_errno != ESP_OK) {
 			return false;
 		}
 	}
@@ -377,10 +378,10 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 		if(findPage->state() == Page::PageState::UNINITIALIZED || findPage->state() == Page::PageState::INVALID) {
 			assert(findItem(nsIndex, datatype, key, findPage, item));
 		}
-		mLastError = findPage->eraseItem(nsIndex, datatype, key);
-		if(mLastError != ESP_OK) {
-			if(mLastError == ESP_ERR_FLASH_OP_FAIL) {
-				mLastError = ESP_ERR_NVS_REMOVE_FAILED;
+		nvs_errno = findPage->eraseItem(nsIndex, datatype, key);
+		if(nvs_errno != ESP_OK) {
+			if(nvs_errno == ESP_ERR_FLASH_OP_FAIL) {
+				nvs_errno = ESP_ERR_NVS_REMOVE_FAILED;
 			}
 			return false;
 		}
@@ -390,21 +391,21 @@ bool Container::writeItem(uint8_t nsIndex, ItemType datatype, const String& key,
 	debugCheck();
 #endif
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
 bool Container::createOrOpenNamespace(const String& nsName, bool canCreate, uint8_t& nsIndex)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
 	auto it = std::find(mNamespaces.begin(), mNamespaces.end(), nsName);
 	if(it == std::end(mNamespaces)) {
 		if(!canCreate) {
-			mLastError = ESP_ERR_NVS_NOT_FOUND;
+			nvs_errno = ESP_ERR_NVS_NOT_FOUND;
 			return false;
 		}
 
@@ -416,13 +417,13 @@ bool Container::createOrOpenNamespace(const String& nsName, bool canCreate, uint
 		}
 
 		if(ns == 255) {
-			mLastError = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
+			nvs_errno = ESP_ERR_NVS_NOT_ENOUGH_SPACE;
 			return false;
 		}
 
 		NamespaceEntry* entry = new(std::nothrow) NamespaceEntry;
 		if(entry == nullptr) {
-			mLastError = ESP_ERR_NO_MEM;
+			nvs_errno = ESP_ERR_NO_MEM;
 			return false;
 		}
 
@@ -442,7 +443,7 @@ bool Container::createOrOpenNamespace(const String& nsName, bool canCreate, uint
 		nsIndex = it->mIndex;
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
@@ -465,30 +466,30 @@ bool Container::readMultiPageBlob(uint8_t nsIndex, const String& key, void* data
 	/* Now read corresponding chunks */
 	for(uint8_t chunkNum = 0; chunkNum < chunkCount; chunkNum++) {
 		if(!findItem(nsIndex, ItemType::BLOB_DATA, key, findPage, item, uint8_t(chunkStart) + chunkNum)) {
-			if(mLastError == ESP_ERR_NVS_NOT_FOUND) {
+			if(nvs_errno == ESP_ERR_NVS_NOT_FOUND) {
 				break;
 			}
 			return false;
 		}
-		mLastError = findPage->readItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<uint8_t*>(data) + offset,
-										item.varLength.dataSize, uint8_t(chunkStart) + chunkNum);
-		if(mLastError != ESP_OK) {
+		nvs_errno = findPage->readItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<uint8_t*>(data) + offset,
+									   item.varLength.dataSize, uint8_t(chunkStart) + chunkNum);
+		if(nvs_errno != ESP_OK) {
 			return false;
 		}
 		assert(uint8_t(chunkStart) + chunkNum == item.chunkIndex);
 		offset += item.varLength.dataSize;
 	}
 
-	if(mLastError == ESP_OK) {
+	if(nvs_errno == ESP_OK) {
 		assert(offset == dataSize);
 		return true;
 	}
 
-	if(mLastError == ESP_ERR_NVS_NOT_FOUND) {
+	if(nvs_errno == ESP_ERR_NVS_NOT_FOUND) {
 		eraseMultiPageBlob(nsIndex, key); // cleanup if a chunk is not found
 	}
 
-	mLastError = ESP_ERR_NVS_NOT_FOUND;
+	nvs_errno = ESP_ERR_NVS_NOT_FOUND;
 	return false;
 }
 
@@ -508,28 +509,28 @@ bool Container::cmpMultiPageBlob(uint8_t nsIndex, const String& key, const void*
 	size_t offset = 0;
 
 	if(dataSize != readSize) {
-		mLastError = ESP_ERR_NVS_CONTENT_DIFFERS;
+		nvs_errno = ESP_ERR_NVS_CONTENT_DIFFERS;
 		return false;
 	}
 
 	/* Now read corresponding chunks */
 	for(uint8_t chunkNum = 0; chunkNum < chunkCount; chunkNum++) {
 		if(!findItem(nsIndex, ItemType::BLOB_DATA, key, findPage, item, uint8_t(chunkStart) + chunkNum)) {
-			if(mLastError == ESP_ERR_NVS_NOT_FOUND) {
+			if(nvs_errno == ESP_ERR_NVS_NOT_FOUND) {
 				break;
 			}
 			return false;
 		}
-		mLastError = findPage->cmpItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<const uint8_t*>(data) + offset,
-									   item.varLength.dataSize, uint8_t(chunkStart) + chunkNum);
-		if(mLastError != ESP_OK) {
+		nvs_errno = findPage->cmpItem(nsIndex, ItemType::BLOB_DATA, key, static_cast<const uint8_t*>(data) + offset,
+									  item.varLength.dataSize, uint8_t(chunkStart) + chunkNum);
+		if(nvs_errno != ESP_OK) {
 			return false;
 		}
 		assert(uint8_t(chunkStart) + chunkNum == item.chunkIndex);
 		offset += item.varLength.dataSize;
 	}
 
-	if(mLastError == ESP_OK) {
+	if(nvs_errno == ESP_OK) {
 		assert(offset == dataSize);
 		return true;
 	}
@@ -540,7 +541,7 @@ bool Container::cmpMultiPageBlob(uint8_t nsIndex, const String& key, const void*
 bool Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key, void* data, size_t dataSize)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -550,7 +551,7 @@ bool Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key, 
 		if(readMultiPageBlob(nsIndex, key, data, dataSize)) {
 			return true;
 		}
-		if(mLastError != ESP_ERR_NVS_NOT_FOUND) {
+		if(nvs_errno != ESP_ERR_NVS_NOT_FOUND) {
 			return false;
 		} // else check if the blob is stored with earlier version format without index
 	}
@@ -559,8 +560,8 @@ bool Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key, 
 		return false;
 	}
 
-	mLastError = findPage->readItem(nsIndex, datatype, key, data, dataSize);
-	return mLastError == ESP_OK;
+	nvs_errno = findPage->readItem(nsIndex, datatype, key, data, dataSize);
+	return nvs_errno == ESP_OK;
 }
 
 String Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key)
@@ -574,7 +575,7 @@ String Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key
 			--len;
 		}
 		if(!s.setLength(len)) {
-			mLastError = ESP_ERR_NO_MEM;
+			nvs_errno = ESP_ERR_NO_MEM;
 		} else if(!readItem(nsIndex, datatype, key, s.begin(), dataSize)) {
 			s = nullptr;
 		}
@@ -586,7 +587,7 @@ String Container::readItem(uint8_t nsIndex, ItemType datatype, const String& key
 bool Container::eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset chunkStart)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -598,8 +599,8 @@ bool Container::eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset
 	}
 
 	/* Erase the index first and make children blobs orphan*/
-	mLastError = findPage->eraseItem(nsIndex, ItemType::BLOB_IDX, key, Page::CHUNK_ANY, chunkStart);
-	if(mLastError != ESP_OK) {
+	nvs_errno = findPage->eraseItem(nsIndex, ItemType::BLOB_IDX, key, Page::CHUNK_ANY, chunkStart);
+	if(nvs_errno != ESP_OK) {
 		return false;
 	}
 
@@ -614,26 +615,26 @@ bool Container::eraseMultiPageBlob(uint8_t nsIndex, const String& key, VerOffset
 	/* Now erase corresponding chunks*/
 	for(uint8_t chunkNum = 0; chunkNum < chunkCount; chunkNum++) {
 		if(!findItem(nsIndex, ItemType::BLOB_DATA, key, findPage, item, uint8_t(chunkStart) + chunkNum)) {
-			if(mLastError != ESP_ERR_NVS_NOT_FOUND) {
+			if(nvs_errno != ESP_ERR_NVS_NOT_FOUND) {
 				return false;
 			}
 			continue; // Keep erasing other chunks
 		}
 
-		mLastError = findPage->eraseItem(nsIndex, ItemType::BLOB_DATA, key, uint8_t(chunkStart) + chunkNum);
-		if(mLastError != ESP_OK) {
+		nvs_errno = findPage->eraseItem(nsIndex, ItemType::BLOB_DATA, key, uint8_t(chunkStart) + chunkNum);
+		if(nvs_errno != ESP_OK) {
 			return false;
 		}
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
 bool Container::eraseItem(uint8_t nsIndex, ItemType datatype, const String& key)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -651,14 +652,14 @@ bool Container::eraseItem(uint8_t nsIndex, ItemType datatype, const String& key)
 		return eraseMultiPageBlob(nsIndex, key);
 	}
 
-	mLastError = findPage->eraseItem(nsIndex, datatype, key);
-	return mLastError == ESP_OK;
+	nvs_errno = findPage->eraseItem(nsIndex, datatype, key);
+	return nvs_errno == ESP_OK;
 }
 
 bool Container::eraseNamespace(uint8_t nsIndex)
 {
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -670,13 +671,13 @@ bool Container::eraseNamespace(uint8_t nsIndex)
 			}
 
 			if(err != ESP_OK) {
-				mLastError = err;
+				nvs_errno = err;
 				return false;
 			}
 		}
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
@@ -690,7 +691,7 @@ bool Container::getItemDataSize(uint8_t nsIndex, ItemType datatype, const String
 	dataSize = 0;
 
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -753,8 +754,8 @@ void Container::debugCheck()
 bool Container::fillStats(nvs_stats_t& nvsStats)
 {
 	nvsStats.namespaceCount = mNamespaces.size();
-	mLastError = mPageManager.fillStats(nvsStats);
-	return mLastError == ESP_OK;
+	nvs_errno = mPageManager.fillStats(nvsStats);
+	return nvs_errno == ESP_OK;
 }
 
 bool Container::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
@@ -762,7 +763,7 @@ bool Container::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 	usedEntries = 0;
 
 	if(mState != State::ACTIVE) {
-		mLastError = ESP_ERR_NVS_NOT_INITIALIZED;
+		nvs_errno = ESP_ERR_NVS_NOT_INITIALIZED;
 		return false;
 	}
 
@@ -775,7 +776,7 @@ bool Container::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 				break;
 			}
 			if(err != ESP_OK) {
-				mLastError = err;
+				nvs_errno = err;
 				return false;
 			}
 
@@ -787,14 +788,14 @@ bool Container::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 		}
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
 HandlePtr Container::openHandle(const String& nsName, OpenMode openMode)
 {
 	if(nsName.length() == 0 || nsName.length() > NVS_KEY_NAME_MAX_SIZE) {
-		mLastError = ESP_ERR_INVALID_ARG;
+		nvs_errno = ESP_ERR_INVALID_ARG;
 		return nullptr;
 	}
 
@@ -806,10 +807,10 @@ HandlePtr Container::openHandle(const String& nsName, OpenMode openMode)
 	auto handle = new(std::nothrow) Handle(*this, nsIndex, openMode == OpenMode::ReadOnly);
 
 	if(handle == nullptr) {
-		mLastError = ESP_ERR_NO_MEM;
+		nvs_errno = ESP_ERR_NO_MEM;
 	} else {
 		++mHandleCount;
-		mLastError = ESP_OK;
+		nvs_errno = ESP_OK;
 	}
 
 	return HandlePtr(handle);

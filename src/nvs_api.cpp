@@ -21,6 +21,8 @@
 #define LOG_INFO(fmt, ...)
 #endif
 
+int nvs_errno;
+
 using namespace nvs;
 
 #define GET_HANDLE(key)                                                                                                \
@@ -35,7 +37,7 @@ using namespace nvs;
 		return ESP_ERR_INVALID_ARG;                                                                                    \
 	}
 
-#define HANDLE_METHOD(method, ...) return handle->method(__VA_ARGS__) ? ESP_OK : handle->lastError()
+#define HANDLE_METHOD(method, ...) return handle->method(__VA_ARGS__) ? ESP_OK : nvs_errno
 
 Handle* getHandle(nvs_handle_t c_handle)
 {
@@ -44,7 +46,7 @@ Handle* getHandle(nvs_handle_t c_handle)
 
 esp_err_t nvs_flash_init(void)
 {
-	return partitionManager.openContainer(NVS_DEFAULT_PART_NAME) ? ESP_OK : partitionManager.lastError();
+	return partitionManager.openContainer(NVS_DEFAULT_PART_NAME) ? ESP_OK : nvs_errno;
 }
 
 esp_err_t nvs_flash_deinit(void)
@@ -54,7 +56,7 @@ esp_err_t nvs_flash_deinit(void)
 
 esp_err_t nvs_flash_deinit_partition(const char* partition_label)
 {
-	return partitionManager.closeContainer(partition_label) ? ESP_OK : partitionManager.lastError();
+	return partitionManager.closeContainer(partition_label) ? ESP_OK : nvs_errno;
 }
 
 esp_err_t nvs_flash_erase_partition(const char* part_name)
@@ -78,12 +80,13 @@ esp_err_t nvs_open_from_partition(const char* part_name, const char* name, nvs_o
 								  nvs_handle_t* out_handle)
 {
 	auto handle = partitionManager.openHandle(part_name, name, open_mode);
-	if(handle) {
-		*out_handle = reinterpret_cast<nvs_handle_t>(handle.release());
-		LOG_INFO("%s(0x%08x)", __FUNCTION__, *out_handle);
-		return ESP_OK;
+	if(!handle) {
+		return nvs_errno;
 	}
-	return partitionManager.lastError();
+
+	*out_handle = reinterpret_cast<nvs_handle_t>(handle.release());
+	LOG_INFO("%s(0x%08x)", __FUNCTION__, *out_handle);
+	return ESP_OK;
 }
 
 esp_err_t nvs_open(const char* name, OpenMode open_mode, nvs_handle_t* out_handle)
@@ -220,7 +223,7 @@ static esp_err_t nvs_get_str_or_blob(nvs_handle_t c_handle, nvs::ItemType type, 
 
 	size_t dataSize;
 	if(!handle->getItemDataSize(type, key, dataSize)) {
-		return handle->lastError();
+		return nvs_errno;
 	}
 
 	if(length == nullptr) {

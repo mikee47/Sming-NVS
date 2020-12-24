@@ -32,19 +32,19 @@ Storage::Partition PartitionManager::findPartition(const String& name)
 bool PartitionManager::verify(Storage::Partition& part)
 {
 	if(!part) {
-		mLastError = ESP_ERR_NVS_PART_NOT_FOUND;
+		nvs_errno = ESP_ERR_NVS_PART_NOT_FOUND;
 		return false;
 	}
 	if(!part.verify(Storage::Partition::SubType::Data::nvs)) {
-		mLastError = ESP_ERR_NOT_SUPPORTED;
+		nvs_errno = ESP_ERR_NOT_SUPPORTED;
 		return false;
 	}
 	if(part.isEncrypted()) {
-		mLastError = ESP_ERR_NVS_WRONG_ENCRYPTION;
+		nvs_errno = ESP_ERR_NVS_WRONG_ENCRYPTION;
 		return false;
 	}
 
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
@@ -56,7 +56,7 @@ PartitionPtr PartitionManager::lookupPartition(const String& name)
 	}
 
 	PartitionPtr partition(new(std::nothrow) Partition(part));
-	mLastError = partition ? ESP_OK : ESP_ERR_NO_MEM;
+	nvs_errno = partition ? ESP_OK : ESP_ERR_NO_MEM;
 	return partition;
 }
 
@@ -71,10 +71,10 @@ PartitionPtr PartitionManager::lookupPartition(const String& name, const Encrypt
 	auto enc_p = new(std::nothrow) EncryptedPartition(part);
 
 	if(enc_p == nullptr) {
-		mLastError = ESP_ERR_NO_MEM;
+		nvs_errno = ESP_ERR_NO_MEM;
 	} else {
-		mLastError = enc_p->init(cfg);
-		if(mLastError != ESP_OK) {
+		nvs_errno = enc_p->init(cfg);
+		if(nvs_errno != ESP_OK) {
 			delete enc_p;
 			enc_p = nullptr;
 		}
@@ -92,7 +92,7 @@ Container* PartitionManager::openContainer(const String& partitionName)
 		// Already initialised
 		return container;
 	}
-	if(mLastError == ESP_ERR_INVALID_ARG) {
+	if(nvs_errno == ESP_ERR_INVALID_ARG) {
 		return nullptr;
 	}
 
@@ -114,7 +114,7 @@ Container* PartitionManager::openContainer(Storage::Partition& part)
 		// Already initialised
 		return container;
 	}
-	if(mLastError == ESP_ERR_INVALID_ARG) {
+	if(nvs_errno == ESP_ERR_INVALID_ARG) {
 		return nullptr;
 	}
 	if(!verify(part)) {
@@ -123,7 +123,7 @@ Container* PartitionManager::openContainer(Storage::Partition& part)
 
 	PartitionPtr partition(new(std::nothrow) Partition(part));
 	if(!partition) {
-		mLastError = ESP_ERR_NO_MEM;
+		nvs_errno = ESP_ERR_NO_MEM;
 		return nullptr;
 	}
 
@@ -134,7 +134,7 @@ Container* PartitionManager::openContainer(Storage::Partition& part)
 Container* PartitionManager::openContainer(PartitionPtr&& partition)
 {
 	if(!partition) {
-		mLastError = ESP_ERR_INVALID_ARG;
+		nvs_errno = ESP_ERR_INVALID_ARG;
 		return nullptr;
 	}
 
@@ -146,17 +146,16 @@ Container* PartitionManager::openContainer(PartitionPtr&& partition)
 	container = new(std::nothrow) Container(partition);
 
 	if(container == nullptr) {
-		mLastError = ESP_ERR_NO_MEM;
+		nvs_errno = ESP_ERR_NO_MEM;
 		return nullptr;
 	}
 
 	if(container->init()) {
 		container_list.push_back(container);
-		mLastError = ESP_OK;
+		nvs_errno = ESP_OK;
 		return container;
 	}
 
-	mLastError = container->lastError();
 	delete container;
 	return nullptr;
 }
@@ -168,7 +167,7 @@ bool PartitionManager::openContainer(const String& name, const EncryptionKey* cf
 	if(container != nullptr) {
 		return true;
 	}
-	if(mLastError == ESP_ERR_INVALID_ARG) {
+	if(nvs_errno == ESP_ERR_INVALID_ARG) {
 		return false;
 	}
 
@@ -189,36 +188,29 @@ bool PartitionManager::closeContainer(const String& name)
 	}
 
 	if(!container->checkNoHandlesInUse()) {
-		mLastError = container->lastError();
 		return false;
 	}
 
 	delete container;
-	mLastError = ESP_OK;
+	nvs_errno = ESP_OK;
 	return true;
 }
 
 HandlePtr PartitionManager::openHandle(const String& partName, const String& nsName, OpenMode openMode)
 {
 	auto container = lookupContainer(partName);
-	if(container == nullptr) {
-		return nullptr;
-	}
-
-	auto handle = container->openHandle(nsName, openMode);
-	mLastError = container->lastError();
-	return handle;
+	return container ? container->openHandle(nsName, openMode) : nullptr;
 }
 
 Container* PartitionManager::lookupContainer(const String& partName)
 {
 	if(partName.length() > Storage::Partition::nameSize) {
-		mLastError = ESP_ERR_INVALID_ARG;
+		nvs_errno = ESP_ERR_INVALID_ARG;
 		return nullptr;
 	}
 
 	auto it = find(container_list.begin(), container_list.end(), partName);
-	mLastError = it ? ESP_OK : ESP_ERR_NVS_NOT_INITIALIZED;
+	nvs_errno = it ? ESP_OK : ESP_ERR_NVS_NOT_INITIALIZED;
 	return static_cast<Container*>(it);
 }
 

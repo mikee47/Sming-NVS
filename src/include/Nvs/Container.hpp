@@ -259,14 +259,6 @@ public:
 		return mNamespaces;
 	}
 
-	/**
-	 * @brief Return error code from last operation
-	 */
-	esp_err_t lastError() const
-	{
-		return mLastError;
-	}
-
 private:
 	friend Handle;
 	friend ItemIterator;
@@ -305,7 +297,6 @@ private:
 	NamespaceList mNamespaces;
 	CompressedEnumTable<bool, 1, 256> mNamespaceUsage;
 	State mState{State::INVALID};
-	esp_err_t mLastError{ESP_OK};
 };
 
 } // namespace nvs

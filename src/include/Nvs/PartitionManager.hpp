@@ -96,14 +96,6 @@ public:
 		return count;
 	}
 
-	/**
-	 * @brief Fetch error code for last operation
-	 */
-	esp_err_t lastError() const
-	{
-		return mLastError;
-	}
-
 private:
 	friend Container;
 
@@ -115,7 +107,6 @@ private:
 	bool verify(Storage::Partition& part);
 
 	intrusive_list<nvs::Container> container_list;
-	esp_err_t mLastError{ESP_OK};
 };
 
 extern PartitionManager partitionManager;
