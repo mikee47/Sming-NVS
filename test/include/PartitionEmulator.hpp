@@ -11,110 +11,48 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "nvs_partition.hpp"
-#include "nvs_encrypted_partition.hpp"
-#include "spi_flash_emulation.h"
-#include "nvs.h"
 
-class PartitionEmulation : public nvs::Partition
+#include <Nvs/nvs.h>
+#include <Nvs/Partition.hpp>
+#ifdef ENABLE_NVS_ENCRYPTION
+#include <Nvs/EncryptedPartition.hpp>
+#endif
+#include <Storage/partition_info.h>
+#include "FlashEmulator.h"
+
+template <typename PartitionClass> class PartitionEmulatorTemplate : public PartitionClass
 {
 public:
-	PartitionEmulation(SpiFlashEmulator* spi_flash_emulator, uint32_t address, uint32_t size,
-					   const char* partition_name = NVS_DEFAULT_PART_NAME)
-		: partition_name(partition_name), flash_emu(spi_flash_emulator), address(address), size(size)
+	PartitionEmulatorTemplate(FlashEmulator& emu, uint32_t address, uint32_t size,
+							  const char* partition_name = NVS_DEFAULT_PART_NAME)
+		: PartitionClass(emu, info), info{partition_name, Storage::Partition::Type::data,
+										  uint8_t(Storage::Partition::SubType::Data::nvs), address, size}
 	{
 		assert(partition_name);
-		assert(flash_emu);
 		assert(size);
+		emu.partitions().add(info);
 	}
 
-	const char* get_partition_name() override
+	nvs::PartitionPtr ptr()
 	{
-		return partition_name;
-	}
-
-	esp_err_t read_raw(size_t src_offset, void* dst, size_t size) override
-	{
-		if(!flash_emu->read(reinterpret_cast<uint32_t*>(dst), src_offset, size)) {
-			return ESP_ERR_FLASH_OP_FAIL;
-		}
-
-		return ESP_OK;
-	}
-
-	esp_err_t read(size_t src_offset, void* dst, size_t size) override
-	{
-		if(!flash_emu->read(reinterpret_cast<uint32_t*>(dst), src_offset, size)) {
-			return ESP_ERR_FLASH_OP_FAIL;
-		}
-
-		return ESP_OK;
-	}
-
-	esp_err_t write_raw(size_t dst_offset, const void* src, size_t size) override
-	{
-		if(!flash_emu->write(dst_offset, reinterpret_cast<const uint32_t*>(src), size)) {
-			return ESP_ERR_FLASH_OP_FAIL;
-		}
-
-		return ESP_OK;
-	}
-
-	esp_err_t write(size_t dst_offset, const void* src, size_t size) override
-	{
-		if(!flash_emu->write(dst_offset, reinterpret_cast<const uint32_t*>(src), size)) {
-			return ESP_ERR_FLASH_OP_FAIL;
-		}
-
-		return ESP_OK;
-	}
-
-	esp_err_t erase_range(size_t dst_offset, size_t size) override
-	{
-		if(size % SPI_FLASH_SEC_SIZE != 0) {
-			return ESP_ERR_INVALID_SIZE;
-		}
-
-		if(dst_offset % SPI_FLASH_SEC_SIZE != 0) {
-			return ESP_ERR_INVALID_ARG;
-		}
-
-		size_t start_sector = dst_offset / SPI_FLASH_SEC_SIZE;
-		size_t num_sectors = size / SPI_FLASH_SEC_SIZE;
-		for(size_t sector = start_sector; sector < (start_sector + num_sectors); sector++) {
-			if(!flash_emu->erase(sector)) {
-				return ESP_ERR_FLASH_OP_FAIL;
-			}
-		}
-
-		return ESP_OK;
-	}
-
-	uint32_t get_address() override
-	{
-		return address;
-	}
-
-	uint32_t get_size() override
-	{
-		return size;
+		return nvs::PartitionPtr(new PartitionClass(*this));
 	}
 
 private:
-	const char* partition_name;
+	Storage::Partition::Info info;
+};
 
-	SpiFlashEmulator* flash_emu;
-
-	uint32_t address;
-
-	uint32_t size;
+class PartitionEmulator : public PartitionEmulatorTemplate<nvs::Partition>
+{
+public:
+	using PartitionEmulatorTemplate::PartitionEmulatorTemplate;
 };
 
 struct PartitionEmulationFixture {
 	PartitionEmulationFixture(uint32_t start_sector = 0, uint32_t sector_size = 1,
 							  const char* partition_name = NVS_DEFAULT_PART_NAME)
 		: emu(start_sector + sector_size),
-		  part(&emu, start_sector * SPI_FLASH_SEC_SIZE, sector_size * SPI_FLASH_SEC_SIZE, partition_name)
+		  part(emu, start_sector * SPI_FLASH_SEC_SIZE, sector_size * SPI_FLASH_SEC_SIZE, partition_name)
 	{
 	}
 
@@ -122,29 +60,28 @@ struct PartitionEmulationFixture {
 	{
 	}
 
-	SpiFlashEmulator emu;
+	FlashEmulator emu;
+	PartitionEmulator part;
+};
 
-	PartitionEmulation part;
+#ifdef ENABLE_NVS_ENCRYPTION
+class EncryptedPartitionEmulator : public PartitionEmulatorTemplate<nvs::EncryptedPartition>
+{
+public:
+	using PartitionEmulatorTemplate::PartitionEmulatorTemplate;
 };
 
 struct EncryptedPartitionFixture {
-	EncryptedPartitionFixture(nvs_sec_cfg_t* cfg, uint32_t start_sector = 0, uint32_t sector_size = 1,
+	EncryptedPartitionFixture(const EncryptionKey& key, uint32_t start_sector = 0, uint32_t sector_size = 1,
 							  const char* partition_name = NVS_DEFAULT_PART_NAME)
-		: esp_partition(), emu(start_sector + sector_size), part(&esp_partition)
+		: emu(start_sector + sector_size),
+		  part(emu, start_sector * SPI_FLASH_SEC_SIZE, sector_size * SPI_FLASH_SEC_SIZE, partition_name)
+
 	{
-		esp_partition.address = start_sector * SPI_FLASH_SEC_SIZE;
-		esp_partition.size = sector_size * SPI_FLASH_SEC_SIZE;
-		strncpy(esp_partition.label, partition_name, PART_NAME_MAX_SIZE);
-		assert(part.init(cfg) == ESP_OK);
+		assert(part.init(key) == ESP_OK);
 	}
 
-	~EncryptedPartitionFixture()
-	{
-	}
-
-	esp_partition_t esp_partition;
-
-	SpiFlashEmulator emu;
-
-	nvs::NVSEncryptedPartition part;
+	FlashEmulator emu;
+	EncryptedPartitionEmulator part;
 };
+#endif

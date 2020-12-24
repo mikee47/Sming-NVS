@@ -1,5 +1,5 @@
-#include <SmingTest.h>
-#include <Storage/PartitionTable.h>
+#include <NvsTest.h>
+#include <Storage.h>
 #include <Nvs/PartitionManager.hpp>
 
 #ifdef ENABLE_NVS_ENCRYPTION
@@ -11,13 +11,13 @@ DEFINE_FSTR_LOCAL(partNvsTest, "nvs_test")
 #define REQUIRE_HANDLE(expr)                                                                                           \
 	do {                                                                                                               \
 		auto& handle_ref = expr;                                                                                       \
-		REQUIRE_EQ(ESP_OK, nvs::partitionManager.lastError());                                                         \
+		REQUIRE_EQ(ESP_OK, nvs_errno);                                                                                 \
 		REQUIRE2(handle_ref, expr);                                                                                    \
 	} while(0)
 #define TEST_HANDLE_ERR(res, expr)                                                                                     \
 	do {                                                                                                               \
 		auto& handle_ref = expr;                                                                                       \
-		REQUIRE_EQ(res, nvs::partitionManager.lastError());                                                            \
+		REQUIRE_EQ(res, nvs_errno);                                                                                    \
 		REQUIRE2(!handle_ref, expr);                                                                                   \
 	} while(0)
 
@@ -30,20 +30,23 @@ public:
 
 	void listPartitions()
 	{
-		for(auto part : partitionTable) {
-			Serial.print(F("Partition '"));
+		for(auto it = Storage::findPartition(); it; ++it) {
+			auto part = *it;
+
+			Serial.println();
+			Serial.print(_F("Device '"));
+			Serial.print(part.getDeviceName());
+			Serial.print(_F("', partition '"));
 			Serial.print(part.name());
-			Serial.print(F("', type "));
+			Serial.print(_F("', type "));
 			Serial.print(int(part.type()));
 			Serial.print('/');
 			Serial.print(int(part.subType()));
 			Serial.print(" (");
 			Serial.print(part.longTypeString());
-			Serial.print(F("), device '"));
-			Serial.print(part.getDeviceName());
-			Serial.print(F("', address 0x"));
+			Serial.print(_F("), address 0x"));
 			Serial.print(part.address(), HEX);
-			Serial.print(F(", size 0x"));
+			Serial.print(_F(", size 0x"));
 			Serial.print(part.size(), HEX);
 			Serial.println();
 
@@ -75,6 +78,7 @@ public:
 		}
 		auto part = nvs::partitionManager.findPartition(partNvsTest);
 		if(!part) {
+			debug_e("findPartition('%s') failed: 0x%04x", String(partNvsTest).c_str(), nvs_errno);
 			return false;
 		}
 		return part.erase_range(0, part.size());
@@ -90,12 +94,11 @@ public:
 			return false;
 		}
 
-		auto err = nvs::partitionManager.lastError();
-		if(err != ESP_ERR_NVS_NO_FREE_PAGES && err != ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		if(nvs_errno != ESP_ERR_NVS_NO_FREE_PAGES && nvs_errno != ESP_ERR_NVS_NEW_VERSION_FOUND) {
 			return false;
 		}
 
-		debug_w("nvsInit failed (0x%x), erasing partition and retrying", err);
+		debug_w("nvsInit failed (0x%x), erasing partition and retrying", nvs_errno);
 
 		if(!nvsErasePartition()) {
 			return false;
@@ -124,7 +127,8 @@ public:
 		{
 			DEFINE_FSTR_LOCAL(TOO_LONG_NAME, "0123456789abcdefg");
 
-			REQUIRE(!nvs::openContainer(TOO_LONG_NAME) && nvs::partitionManager.lastError() == ESP_ERR_INVALID_ARG);
+			REQUIRE(!nvs::openContainer(TOO_LONG_NAME));
+			REQUIRE_EQ(nvs_errno, ESP_ERR_INVALID_ARG);
 
 			REQUIRE(nvs::closeContainer(TOO_LONG_NAME));
 		}
@@ -370,7 +374,7 @@ public:
 				String key = F("key_");
 				key += i;
 				if(!handle->setString(key, key)) {
-					debug_e("setString() failed @%u, err = %u", i, handle->lastError());
+					debug_e("setString() failed @%u, err = %u", i, nvs_errno);
 					entryCount = i;
 					break;
 				}
@@ -387,7 +391,7 @@ public:
 				key += i;
 				auto value = handle->getString(key);
 				if(value != key) {
-					debug_e("getString('%s') failed, err = %u", key.c_str(), handle->lastError());
+					debug_e("getString('%s') failed, err = %u", key.c_str(), nvs_errno);
 					break;
 				}
 			}
@@ -409,24 +413,6 @@ public:
 
 			listContainer("nvs");
 		}
-	}
-
-	bool listContainer(const String& name)
-	{
-		auto container = nvs::partitionManager.lookupContainer(name);
-		if(container == nullptr) {
-			return false;
-		}
-
-		unsigned count{0};
-		for(auto item : *container) {
-			debug_i("{ namespace: \"%s\", key: \"%s\", dataType: %s, dataSize: %u }", item.nsName().c_str(),
-					item.key().c_str(), toString(item.dataType()).c_str(), item.dataSize());
-			++count;
-		}
-		debug_i("%u items found", count);
-
-		return true;
 	}
 };
 

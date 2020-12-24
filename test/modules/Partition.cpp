@@ -11,45 +11,50 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "catch.hpp"
-#include <algorithm>
-#include <cstring>
-#include "nvs_test_api.h"
-#include "nvs_handle_simple.hpp"
-#include "nvs_partition.hpp"
-#include "spi_flash_emulation.h"
 
-#include "test_fixtures.hpp"
+#include <NvsTest.h>
+#include <Nvs/PartitionManager.hpp>
 
-#include <iostream>
-
-using namespace std;
 using namespace nvs;
 
-TEST_CASE("encrypted partition read size must be item size", "[nvs]")
+class PartitionTest : public TestGroup
 {
-	char foo[32] = {};
-	nvs_sec_cfg_t xts_cfg;
-	for(int count = 0; count < NVS_KEY_SIZE; count++) {
-		xts_cfg.eky[count] = 0x11;
-		xts_cfg.tky[count] = 0x22;
+public:
+	PartitionTest() : TestGroup(_F("NVS Partitions"))
+	{
 	}
-	EncryptedPartitionFixture fix(&xts_cfg);
 
-	CHECK(fix.part.read(0, foo, sizeof(foo) - 1) == ESP_ERR_INVALID_SIZE);
-}
+	void execute() override
+	{
+#ifdef ENABLE_NVS_ENCRYPTION
+		TEST_CASE("encrypted partition read size must be item size")
+		{
+			char foo[32] = {};
+			EncryptionKey key;
+			memset(key.eky, 0x11, key.keySize);
+			memset(key.tky, 0x22, key.keySize);
+			EncryptedPartitionFixture fix(key);
 
-TEST_CASE("encrypted partition write size must be mod item size", "[nvs]")
+			CHECK(fix.part->read(0, foo, sizeof(foo) - 1) == ESP_ERR_INVALID_SIZE);
+		}
+
+		TEST_CASE("encrypted partition write size must be mod item size")
+		{
+			char foo[64] = {};
+			EncryptionKey key;
+			memset(key.eky, 0x11, key.keySize);
+			memset(key.tky, 0x22, key.keySize);
+			EncryptedPartitionFixture fix(key);
+
+			CHECK(fix.part->write(0, foo, sizeof(foo) - 1) == ESP_ERR_INVALID_SIZE);
+			CHECK(fix.part->write(0, foo, sizeof(foo)) == ESP_OK);
+			CHECK(fix.part->write(0, foo, sizeof(foo) * 2) == ESP_OK);
+		}
+#endif
+	}
+};
+
+void REGISTER_TEST(Partition)
 {
-	char foo[64] = {};
-	nvs_sec_cfg_t xts_cfg;
-	for(int count = 0; count < NVS_KEY_SIZE; count++) {
-		xts_cfg.eky[count] = 0x11;
-		xts_cfg.tky[count] = 0x22;
-	}
-	EncryptedPartitionFixture fix(&xts_cfg);
-
-	CHECK(fix.part.write(0, foo, sizeof(foo) - 1) == ESP_ERR_INVALID_SIZE);
-	CHECK(fix.part.write(0, foo, sizeof(foo)) == ESP_OK);
-	CHECK(fix.part.write(0, foo, sizeof(foo) * 2) == ESP_OK);
+	registerGroup<PartitionTest>();
 }

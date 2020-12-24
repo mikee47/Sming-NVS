@@ -11,85 +11,64 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "catch.hpp"
-#include <algorithm>
-#include <cstring>
-#include "nvs_test_api.h"
-#include "nvs_handle_simple.hpp"
-#include "nvs_partition_manager.hpp"
-#include "spi_flash_emulation.h"
-#include "nvs_test_api.h"
 
-#include "test_fixtures.hpp"
+#include <NvsTest.h>
+#include <Nvs/Handle.hpp>
+#include <Nvs/PartitionManager.hpp>
 
 using namespace nvs;
 
-TEST_CASE("Partition manager initializes storage", "[partition_mgr]")
+class PartitionManagerTest : public TestGroup
 {
-	const uint32_t NVS_FLASH_SECTOR = 6;
-	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-	PartitionEmulationFixture f(0, 10, "test");
+public:
+	PartitionManagerTest() : TestGroup(_F("NVS Partition Manager"))
+	{
+	}
 
-	REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN) ==
-			ESP_OK);
-	CHECK(NVSPartitionManager::get_instance()->lookup_storage_from_name("test") != nullptr);
-	REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(f.part.get_partition_name()) == ESP_OK);
-}
+	void execute() override
+	{
+		TEST_CASE("Partition manager initializes storage")
+		{
+			PartitionEmulationFixture f(0, 10, "test");
 
-TEST_CASE("Partition manager de-initializes storage", "[partition_mgr]")
+			REQUIRE(partitionManager.openContainer(f.part.ptr()));
+			CHECK(partitionManager.lookupContainer("test"));
+			REQUIRE(partitionManager.closeContainer("test"));
+		}
+
+		TEST_CASE("Partition manager de-initializes storage")
+		{
+			PartitionEmulationFixture f(0, 10, "test");
+
+			REQUIRE(partitionManager.openContainer(f.part.ptr()));
+			CHECK(partitionManager.lookupContainer("test"));
+			CHECK(partitionManager.closeContainer("test"));
+			CHECK(!partitionManager.lookupContainer("test"));
+		}
+
+		TEST_CASE("Partition manager initializes multiple partitions")
+		{
+			FlashEmulator emu(10);
+			PartitionEmulator part_0(emu, 0, 3 * SPI_FLASH_SEC_SIZE, "test1");
+			PartitionEmulator part_1(emu, 6 * SPI_FLASH_SEC_SIZE, 3 * SPI_FLASH_SEC_SIZE, "test2");
+
+			REQUIRE(partitionManager.openContainer(part_0.ptr()));
+			REQUIRE(partitionManager.openContainer(part_1.ptr()));
+
+			auto container1 = partitionManager.lookupContainer("test1");
+			REQUIRE(container1);
+			auto container2 = partitionManager.lookupContainer("test2");
+			REQUIRE(container2);
+
+			REQUIRE(container1 != container2);
+
+			REQUIRE(partitionManager.closeContainer("test1"));
+			REQUIRE(partitionManager.closeContainer("test2"));
+		}
+	}
+};
+
+void REGISTER_TEST(PartitionManager)
 {
-	const uint32_t NVS_FLASH_SECTOR = 6;
-	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-	PartitionEmulationFixture f(0, 10, "test");
-
-	REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN) ==
-			ESP_OK);
-	CHECK(NVSPartitionManager::get_instance()->lookup_storage_from_name("test") != nullptr);
-	CHECK(NVSPartitionManager::get_instance()->deinit_partition("test") == ESP_OK);
-	CHECK(NVSPartitionManager::get_instance()->lookup_storage_from_name("test") == nullptr);
-}
-
-TEST_CASE("Partition manager initializes multiple partitions", "[partition_mgr]")
-{
-	const uint32_t NVS_FLASH_SECTOR = 6;
-	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-	SpiFlashEmulator emu(10);
-	PartitionEmulation part_0(&emu, NVS_FLASH_SECTOR * SPI_FLASH_SEC_SIZE,
-							  NVS_FLASH_SECTOR_COUNT_MIN * SPI_FLASH_SEC_SIZE, "test1");
-	PartitionEmulation part_1(&emu, NVS_FLASH_SECTOR * SPI_FLASH_SEC_SIZE,
-							  NVS_FLASH_SECTOR_COUNT_MIN * SPI_FLASH_SEC_SIZE, "test2");
-
-	REQUIRE(NVSPartitionManager::get_instance()->init_custom(&part_0, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN) ==
-			ESP_OK);
-	// TODO: why does this work, actually? same sectors used as above
-	REQUIRE(NVSPartitionManager::get_instance()->init_custom(&part_1, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN) ==
-			ESP_OK);
-	Storage* storage1 = NVSPartitionManager::get_instance()->lookup_storage_from_name("test1");
-	REQUIRE(storage1 != nullptr);
-	Storage* storage2 = NVSPartitionManager::get_instance()->lookup_storage_from_name("test2");
-	REQUIRE(storage2 != nullptr);
-
-	CHECK(storage1 != storage2);
-	REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(part_0.get_partition_name()) == ESP_OK);
-	REQUIRE(NVSPartitionManager::get_instance()->deinit_partition(part_1.get_partition_name()) == ESP_OK);
-}
-
-TEST_CASE("Partition manager invalidates handle on partition de-init", "[partition_mgr]")
-{
-	const uint32_t NVS_FLASH_SECTOR = 6;
-	const uint32_t NVS_FLASH_SECTOR_COUNT_MIN = 3;
-	PartitionEmulationFixture f(0, 10, "test");
-
-	REQUIRE(NVSPartitionManager::get_instance()->init_custom(&f.part, NVS_FLASH_SECTOR, NVS_FLASH_SECTOR_COUNT_MIN) ==
-			ESP_OK);
-
-	NVSHandle* handle;
-	REQUIRE(NVSPartitionManager::get_instance()->open_handle("test", "ns_1", NVS_READWRITE, &handle) == ESP_OK);
-	CHECK(handle->erase_all() == ESP_OK);
-
-	REQUIRE(NVSPartitionManager::get_instance()->deinit_partition("test") == ESP_OK);
-
-	CHECK(handle->erase_all() == ESP_ERR_NVS_INVALID_HANDLE);
-
-	delete handle;
+	registerGroup<PartitionManagerTest>();
 }

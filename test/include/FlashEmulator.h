@@ -11,235 +11,139 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef spi_flash_emulation_h
-#define spi_flash_emulation_h
+
+#pragma once
 
 #include <vector>
 #include <cassert>
 #include <algorithm>
-#include <random>
-#include "esp_spi_flash.h"
-#include "catch.hpp"
+#include <Storage/CustomDevice.h>
+#include <esp_spi_flash.h>
+#include <Print.h>
 
-using std::begin;
-using std::copy;
-using std::end;
-using std::fill_n;
-
-class SpiFlashEmulator;
-
-void spi_flash_emulator_set(SpiFlashEmulator*);
-
-class SpiFlashEmulator
+class FlashEmulator : public Storage::Device
 {
 public:
-	SpiFlashEmulator(size_t sectorCount) : mUpperSectorBound(sectorCount)
+	struct Stat {
+		size_t readOps;
+		size_t writeOps;
+		size_t readBytes;
+		size_t writeBytes;
+		size_t eraseOps;
+		size_t totalTime;
+	};
+
+	FlashEmulator(size_t sectorCount)
 	{
-		mData.resize(sectorCount * SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
-		mEraseCnt.resize(sectorCount);
-		spi_flash_emulator_set(this);
+		resize(sectorCount);
 	}
 
-	SpiFlashEmulator(const char* filename)
+	FlashEmulator(const char* filename)
 	{
 		load(filename);
-		// Atleast one page should be free, hence we create mData of size of 2 sectors.
-		mData.resize(mData.size() + SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
-		mUpperSectorBound = mData.size() * 4 / SPI_FLASH_SEC_SIZE;
-		spi_flash_emulator_set(this);
 	}
 
-	~SpiFlashEmulator()
+	FlashEmulator(const FlashString& fstr)
 	{
-		spi_flash_emulator_set(nullptr);
+		load(fstr);
 	}
 
-	bool read(uint32_t* dest, size_t srcAddr, size_t size) const
+	~FlashEmulator()
 	{
-		if(srcAddr % 4 != 0 || size % 4 != 0 || srcAddr + size > mData.size() * 4) {
-			return false;
-		}
-
-		copy(begin(mData) + srcAddr / 4, begin(mData) + (srcAddr + size) / 4, dest);
-
-		++mReadOps;
-		mReadBytes += size;
-		mTotalTime += getReadOpTime(static_cast<uint32_t>(size));
-		return true;
+		delete[] mData;
+		delete[] mEraseCnt;
 	}
 
-	bool write(size_t dstAddr, const uint32_t* src, size_t size)
+	String getName() const override
 	{
-		uint32_t sectorNumber = dstAddr / SPI_FLASH_SEC_SIZE;
-		if(sectorNumber < mLowerSectorBound || sectorNumber >= mUpperSectorBound) {
-			WARN("invalid flash operation detected: erase sector=" << sectorNumber);
-			return false;
-		}
-
-		if(dstAddr % 4 != 0 || size % 4 != 0 || dstAddr + size > mData.size() * 4) {
-			return false;
-		}
-
-		for(size_t i = 0; i < size / 4; ++i) {
-			if(mFailCountdown != SIZE_MAX && mFailCountdown-- == 0) {
-				return false;
-			}
-
-			uint32_t sv = src[i];
-			size_t pos = dstAddr / 4 + i;
-			uint32_t& dv = mData[pos];
-
-			if(((~dv) & sv) != 0) { // are we trying to set some 0 bits to 1?
-				WARN("invalid flash operation detected: dst=" << dstAddr << " size=" << size << " i=" << i);
-				return false;
-			}
-
-			dv = sv;
-		}
-		++mWriteOps;
-		mWriteBytes += size;
-		mTotalTime += getWriteOpTime(static_cast<uint32_t>(size));
-		return true;
+		return F("FlashEmulator");
 	}
 
-	bool erase(size_t sectorNumber)
+	size_t getBlockSize() const override
 	{
-		size_t offset = sectorNumber * SPI_FLASH_SEC_SIZE / 4;
-		if(offset > mData.size()) {
-			return false;
-		}
-
-		if(sectorNumber < mLowerSectorBound || sectorNumber >= mUpperSectorBound) {
-			WARN("invalid flash operation detected: erase sector=" << sectorNumber);
-			return false;
-		}
-
-		if(mFailCountdown != SIZE_MAX && mFailCountdown-- == 0) {
-			return false;
-		}
-
-		std::fill_n(begin(mData) + offset, SPI_FLASH_SEC_SIZE / 4, 0xffffffff);
-
-		++mEraseOps;
-		mEraseCnt[sectorNumber]++;
-		mTotalTime += getEraseOpTime();
-		return true;
+		return SPI_FLASH_SEC_SIZE;
 	}
 
-	void randomize(uint32_t seed)
+	size_t getSize() const override
 	{
-		std::random_device rd;
-		std::mt19937 gen(rd());
-		gen.seed(seed);
-		std::generate_n(mData.data(), mData.size(), gen);
+		return mSize;
 	}
 
-	size_t size() const
+	Type getType() const override
 	{
-		return mData.size() * 4;
+		return Type::ram;
 	}
 
-	const uint32_t* words() const
+	bool read(uint32_t address, void* buffer, size_t len) override;
+	bool write(uint32_t address, const void* data, size_t len) override;
+	bool erase_range(uint32_t address, size_t len) override;
+
+	void randomize()
 	{
-		return mData.data();
+		os_get_random(mData, mSize);
+	}
+
+	size_t getSectorCount() const
+	{
+		return mSize / SPI_FLASH_SEC_SIZE;
 	}
 
 	const uint8_t* bytes() const
 	{
-		return reinterpret_cast<const uint8_t*>(mData.data());
+		return mData;
 	}
 
-	void load(const char* filename)
+	const uint32_t* words() const
 	{
-		FILE* f = fopen(filename, "rb");
-		fseek(f, 0, SEEK_END);
-		off_t size = ftell(f);
-		assert(size % SPI_FLASH_SEC_SIZE == 0);
-		mData.resize(size / sizeof(uint32_t));
-		fseek(f, 0, SEEK_SET);
-		auto s = fread(mData.data(), SPI_FLASH_SEC_SIZE, size / SPI_FLASH_SEC_SIZE, f);
-		assert(s == static_cast<size_t>(size / SPI_FLASH_SEC_SIZE));
-		fclose(f);
+		return reinterpret_cast<const uint32_t*>(mData);
 	}
 
-	void save(const char* filename)
-	{
-		FILE* f = fopen(filename, "wb");
-		auto n_sectors = mData.size() * sizeof(uint32_t) / SPI_FLASH_SEC_SIZE;
-		auto s = fwrite(mData.data(), SPI_FLASH_SEC_SIZE, n_sectors, f);
-		assert(s == n_sectors);
-		fclose(f);
-	}
+	void load(const char* filename);
+	void load(const FlashString& fstr);
+	void save(const char* filename);
 
 	void clearStats()
 	{
-		mReadBytes = 0;
-		mWriteBytes = 0;
-		mEraseOps = 0;
-		mReadOps = 0;
-		mWriteOps = 0;
-		mTotalTime = 0;
+		mStat = Stat{};
 	}
 
-	size_t getReadOps() const
+	const Stat& stat() const
 	{
-		return mReadOps;
-	}
-	size_t getWriteOps() const
-	{
-		return mWriteOps;
-	}
-	size_t getEraseOps() const
-	{
-		return mEraseOps;
-	}
-	size_t getReadBytes() const
-	{
-		return mReadBytes;
-	}
-	size_t getWriteBytes() const
-	{
-		return mWriteBytes;
-	}
-	size_t getTotalTime() const
-	{
-		return mTotalTime;
-	}
-
-	void setBounds(uint32_t lowerSector, uint32_t upperSector)
-	{
-		mLowerSectorBound = lowerSector;
-		mUpperSectorBound = upperSector;
+		return mStat;
 	}
 
 	void failAfter(uint32_t count)
 	{
-		mFailCountdown = count;
+		mFailCountdown = 1 + (count * sizeof(uint32_t));
 	}
 
 	size_t getSectorEraseCount(uint32_t sector) const
 	{
+		assert(sector < getSectorCount());
 		return mEraseCnt[sector];
 	}
 
+	void printTo(Print& p, const char* msg);
+
+	void reset();
+
+	using Partitions = Storage::CustomDevice::Partitions;
+	Partitions& partitions()
+	{
+		return reinterpret_cast<Partitions&>(mPartitions);
+	}
+
 protected:
+	void resize(size_t sectorCount);
 	static size_t getReadOpTime(uint32_t bytes);
 	static size_t getWriteOpTime(uint32_t bytes);
 	static size_t getEraseOpTime();
 
-	std::vector<uint32_t> mData;
-	std::vector<uint32_t> mEraseCnt;
+	uint8_t* mData{nullptr};
+	uint32_t* mEraseCnt{nullptr};
+	size_t mSize{0};
 
-	mutable size_t mReadOps = 0;
-	mutable size_t mWriteOps = 0;
-	mutable size_t mReadBytes = 0;
-	mutable size_t mWriteBytes = 0;
-	mutable size_t mEraseOps = 0;
-	mutable size_t mTotalTime = 0;
-	size_t mLowerSectorBound = 0;
-	size_t mUpperSectorBound = 0;
+	mutable Stat mStat{};
 
-	size_t mFailCountdown = SIZE_MAX;
+	size_t mFailCountdown{0};
 };
-
-#endif /* spi_flash_emulation_h */
