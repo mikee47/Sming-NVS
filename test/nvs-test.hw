@@ -2,49 +2,11 @@
 	"name": "NVS Tests profile",
 	"base_config": "standard-4m",
 	"partitions": {
-		"nvs": {
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x100000",
-			"size": "0x10000"
-		},
 		"nvs_test": {
 			"type": "data",
 			"subtype": "nvs",
-			"address": "0x110000",
+			"address": "0x200000",
 			"size": "0x10000"
-		},
-		"nvs_enc": {
-			"comment": "Encrypted partition test",
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x120000",
-			"size": "0x1000"
-		},
-		"nvs_10": {
-			"comment": "10-sector test partition",
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x130000",
-			"size": "0xa000"
-		},
-		"test": {
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x140000",
-			"size": "0x3000"
-		},
-		"test1": {
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x150000",
-			"size": "0x3000"
-		},
-		"test2": {
-			"type": "data",
-			"subtype": "nvs",
-			"address": "0x160000",
-			"size": "0x3000"
 		}
 	}
 }

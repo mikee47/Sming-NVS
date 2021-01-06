@@ -411,7 +411,9 @@ public:
 		{
 			REQUIRE(listContainer(partNvsTest));
 
+#ifdef ARCH_ESP32
 			listContainer("nvs");
+#endif
 		}
 	}
 };
