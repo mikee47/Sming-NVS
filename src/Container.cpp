@@ -28,8 +28,7 @@ Container::~Container()
 
 bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
 {
-	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
-		Page& p = *it;
+	for(auto& page : mPageManager) {
 		size_t itemIndex = 0;
 		Item item;
 
@@ -37,7 +36,7 @@ bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
          * logic in pagemanager will remove the earlier index. So we should never find a
          * duplicate index at this point */
 
-		while(p.findItem(Page::NS_ANY, ItemType::BLOB_IDX, nullptr, itemIndex, item) == ESP_OK) {
+		while(page.findItem(Page::NS_ANY, ItemType::BLOB_IDX, nullptr, itemIndex, item) == ESP_OK) {
 			auto entry = new(std::nothrow) BlobIndexNode;
 			if(entry == nullptr) {
 				nvs_errno = ESP_ERR_NO_MEM;
@@ -60,8 +59,7 @@ bool Container::populateBlobIndices(TBlobIndexList& blobIdxList)
 
 void Container::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
 {
-	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
-		Page& p = *it;
+	for(auto& page : mPageManager) {
 		size_t itemIndex{0};
 		Item item;
 		/* Chunks with same <ns,key> and with chunkIndex in the following ranges
@@ -69,13 +67,13 @@ void Container::eraseOrphanDataBlobs(TBlobIndexList& blobIdxList)
          * 1) VER_0_OFFSET <= chunkIndex < VER_1_OFFSET-1 => Version0 chunks
          * 2) VER_1_OFFSET <= chunkIndex < VER_ANY => Version1 chunks
          */
-		while(p.findItem(Page::NS_ANY, ItemType::BLOB_DATA, nullptr, itemIndex, item) == ESP_OK) {
+		while(page.findItem(Page::NS_ANY, ItemType::BLOB_DATA, nullptr, itemIndex, item) == ESP_OK) {
 			auto iter = std::find_if(blobIdxList.begin(), blobIdxList.end(), [=](const BlobIndexNode& e) -> bool {
 				return (item == e.key) && (item.nsIndex == e.nsIndex) && (item.chunkIndex >= uint8_t(e.chunkStart)) &&
 					   (item.chunkIndex < uint8_t(e.chunkStart) + e.chunkCount);
 			});
 			if(!iter) {
-				p.eraseItem(item.nsIndex, item.datatype, item.key, item.chunkIndex);
+				page.eraseItem(item.nsIndex, item.datatype, item.key, item.chunkIndex);
 			}
 			itemIndex += item.span;
 		}
@@ -110,12 +108,11 @@ bool Container::init()
 	// load namespaces list
 	mNamespaces.clearAndFreeNodes();
 	mNamespaceUsage.clear();
-	for(auto it = mPageManager.begin(); it != mPageManager.end(); ++it) {
-		Page& p = *it;
+	for(auto& page : mPageManager) {
 		size_t itemIndex = 0;
 		Item item;
-		while(p.findItem(Page::NS_INDEX, ItemType::U8, nullptr, itemIndex, item) == ESP_OK) {
-			NamespaceEntry* entry = new(std::nothrow) NamespaceEntry;
+		while(page.findItem(Page::NS_INDEX, ItemType::U8, nullptr, itemIndex, item) == ESP_OK) {
+			auto* entry = new(std::nothrow) NamespaceEntry;
 
 			if(!entry) {
 				mState = State::INVALID;
@@ -716,8 +713,8 @@ bool Container::getItemDataSize(uint8_t nsIndex, ItemType datatype, const String
 
 void Container::debugDump()
 {
-	for(auto p = mPageManager.begin(); p != mPageManager.end(); ++p) {
-		p->debugDump();
+	for(auto& page : mPageManager) {
+		page.debugDump();
 	}
 }
 
@@ -725,11 +722,11 @@ void Container::debugCheck()
 {
 	HashMap<String, Page*> keys;
 
-	for(auto p = mPageManager.begin(); p != mPageManager.end(); ++p) {
+	for(auto& page : mPageManager) {
 		size_t itemIndex = 0;
 		size_t usedCount = 0;
 		Item item;
-		while(p->findItem(Page::NS_ANY, ItemType::ANY, nullptr, itemIndex, item) == ESP_OK) {
+		while(page.findItem(Page::NS_ANY, ItemType::ANY, nullptr, itemIndex, item) == ESP_OK) {
 			String k;
 			k += item.nsIndex;
 			k += '_';
@@ -743,11 +740,11 @@ void Container::debugCheck()
 				debugDump();
 				assert(false);
 			}
-			keys[k] = p;
+			keys[k] = &page;
 			itemIndex += item.span;
 			usedCount += item.span;
 		}
-		assert(usedCount == p->getUsedEntryCount());
+		assert(usedCount == page.getUsedEntryCount());
 	}
 }
 
