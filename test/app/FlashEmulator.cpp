@@ -70,17 +70,21 @@ bool FlashEmulator::write(uint32_t address, const void* data, size_t len)
 		return false;
 	}
 
-	for(size_t i = 0; i < len; ++i) {
+	assert(address % 4 == 0);
+	assert(len % 4 == 0);
+
+	for(size_t i = 0; i < len; i += 4) {
 		if(mFailCountdown != 0 && mFailCountdown-- == 1) {
 			return false;
 		}
 
-		auto sv = static_cast<const uint8_t*>(data)[i];
+		uint32_t sv;
+		memcpy(&sv, &static_cast<const uint8_t*>(data)[i], 4);
 		size_t pos = address + i;
-		uint8_t& dv = mData[pos];
+		uint32_t& dv = *reinterpret_cast<uint32_t*>(&mData[pos]);
 
 		if(((~dv) & sv) != 0) { // are we trying to set some 0 bits to 1?
-			debug_w("invalid flash operation detected: dst = 0x%08x, size = 0x%08x, i = %u", pos, len, i);
+			debug_w("invalid flash operation detected: dst = 0x%08x, size = 0x%04x, i = %u", pos, len, i);
 			return false;
 		}
 
@@ -89,7 +93,7 @@ bool FlashEmulator::write(uint32_t address, const void* data, size_t len)
 
 	++mStat.writeOps;
 	mStat.writeBytes += len;
-	mStat.totalTime += getWriteOpTime(static_cast<uint32_t>(len));
+	mStat.totalTime += getWriteOpTime(len);
 	return true;
 }
 

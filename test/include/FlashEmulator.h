@@ -112,9 +112,12 @@ public:
 		return mStat;
 	}
 
+	/**
+	 * @brief Fail write operation after given number of WORDs
+	 */
 	void failAfter(uint32_t count)
 	{
-		mFailCountdown = 1 + (count * sizeof(uint32_t));
+		mFailCountdown = 1 + count;
 	}
 
 	size_t getSectorEraseCount(uint32_t sector) const
