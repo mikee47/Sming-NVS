@@ -188,7 +188,7 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 		Page& page = getCurrentPage();
 		size_t tailroom = page.getVarDataTailroom();
 		size_t chunkSize = 0;
-		if(!chunkCount && tailroom < dataSize && tailroom < Page::CHUNK_MAX_SIZE / 10) {
+		if(chunkCount == 0 && (tailroom == 0 || tailroom < dataSize) && tailroom < (Page::CHUNK_MAX_SIZE / 10)) {
 			/** This is the first chunk and tailroom is too small ***/
 			if(page.state() != Page::PageState::FULL) {
 				nvs_errno = page.markFull();
