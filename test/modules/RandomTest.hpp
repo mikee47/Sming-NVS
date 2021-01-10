@@ -69,6 +69,7 @@ public:
 		size_t varsize;
 		size_t len;
 		bool written;
+		esp_err_t lastError;
 
 		bool operator==(const char* key) const
 		{
@@ -84,12 +85,6 @@ public:
 			memcpy(value, buf, len);
 			this->len = len;
 			written = true;
-		}
-
-		template <typename T> void update(const T& value)
-		{
-			assert(sizeof(value) == varsize);
-			update(&value, sizeof(value));
 		}
 	};
 
@@ -118,52 +113,52 @@ public:
 
 	esp_err_t randomRead(nvs_handle_t handle, Thing& thing)
 	{
+		auto check = [&](esp_err_t err, const void* data, size_t len) -> esp_err_t {
+			if(err == ESP_ERR_FLASH_OP_FAIL) {
+				return err;
+			}
+
+			//			if(!thing.written) {
+			//				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
+			//			} else {
+			//				CHECK_EQ(err, ESP_OK);
+			//				CHECK_EQ(val, thing.value->i32);
+			//			}
+
+			if(!thing.written) {
+				if(err == ESP_OK) {
+					debug_e("Unexpected, value '%s' not written but returned %u bytes (thing.lastError = 0x%04x)",
+							thing.key, len, thing.lastError);
+					auto h = reinterpret_cast<Handle*>(handle);
+					h->container().debugDump();
+				}
+				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
+			} else {
+				CHECK_EQ(err, ESP_OK);
+				CHECK(memcmp(thing.value, data, len) == 0);
+			}
+
+			return ESP_OK;
+		};
+
 		switch(thing.type) {
 		case ItemType::I32: {
 			int32_t val;
 			auto err = nvs_get_i32(handle, thing.key, &val);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(!thing.written) {
-				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
-			} else {
-				CHECK_EQ(err, ESP_OK);
-				CHECK_EQ(val, thing.value->i32);
-			}
-			break;
+			return check(err, &val, sizeof(val));
 		}
 
 		case ItemType::U64: {
 			uint64_t val;
 			auto err = nvs_get_u64(handle, thing.key, &val);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(!thing.written) {
-				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
-			} else {
-				CHECK_EQ(err, ESP_OK);
-				CHECK_EQ(val, thing.value->u64);
-			}
-			break;
+			return check(err, &val, sizeof(val));
 		}
 
 		case ItemType::SZ: {
 			char buf[strBufLen];
 			size_t len = strBufLen;
 			auto err = nvs_get_str(handle, thing.key, buf, &len);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(!thing.written) {
-				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
-			} else {
-				CHECK_EQ(err, ESP_OK);
-				CHECK_EQ(len, thing.len);
-				CHECK(memcmp(buf, thing.value->str, len) == 0);
-			}
-			break;
+			return check(err, thing.value->str, len);
 		}
 
 		case ItemType::BLOB: {
@@ -173,42 +168,47 @@ public:
 
 			size_t len = blobBufLen;
 			auto err = nvs_get_blob(handle, thing.key, buf, &len);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(!thing.written) {
-				CHECK_EQ(err, ESP_ERR_NVS_NOT_FOUND);
-			} else {
-				CHECK_EQ(err, ESP_OK);
-				CHECK_EQ(len, thing.len);
-				CHECK(memcmp(buf, thing.value->blob, len) == 0);
-			}
-			break;
+			return check(err, thing.value->blob, len);
 		}
 
 		default:
 			assert(0);
+			return ESP_FAIL;
 		}
-		return ESP_OK;
 	}
 
 	esp_err_t randomWrite(nvs_handle_t handle, Thing& thing)
 	{
+		auto check = [&](esp_err_t err, const void* data, size_t len) {
+			thing.lastError = err;
+			if(err == ESP_ERR_FLASH_OP_FAIL) {
+				//				auto h = reinterpret_cast<Handle*>(handle);
+				//				size_t dataSize;
+				//				if(h->getItemDataSize(thing.type, thing.key, dataSize) == ESP_OK) {
+				//
+				//				}
+				return err;
+			}
+			if(err == ESP_ERR_NVS_REMOVE_FAILED) {
+				thing.update(data, len);
+				return ESP_ERR_FLASH_OP_FAIL;
+			}
+			if(err == ESP_ERR_NVS_NOT_ENOUGH_SPACE) {
+				debug_e("Not enough room to write '%s', length = %u", thing.key, len);
+				auto h = reinterpret_cast<Handle*>(handle);
+				h->container().debugDump();
+			}
+			CHECK_EQ(err, ESP_OK);
+			thing.update(data, len);
+			return err;
+		};
+
 		switch(thing.type) {
 		case ItemType::I32: {
 			auto val = int32_t(gen());
 
 			auto err = nvs_set_i32(handle, thing.key, val);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(err == ESP_ERR_NVS_REMOVE_FAILED) {
-				thing.update(val);
-				return ESP_ERR_FLASH_OP_FAIL;
-			}
-			CHECK_EQ(err, ESP_OK);
-			thing.update(val);
-			break;
+			return check(err, &val, sizeof(val));
 		}
 
 		case ItemType::U64: {
@@ -216,38 +216,17 @@ public:
 			gen(val);
 
 			auto err = nvs_set_u64(handle, thing.key, val);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(err == ESP_ERR_NVS_REMOVE_FAILED) {
-				thing.update(val);
-				return ESP_ERR_FLASH_OP_FAIL;
-			}
-			CHECK_EQ(err, ESP_OK);
-			thing.update(val);
-			break;
+			return check(err, &val, sizeof(val));
 		}
 
 		case ItemType::SZ: {
 			char buf[strBufLen];
 			size_t strLen = gen() % (strBufLen - 1);
-			std::generate_n(buf, strLen, [&]() -> char {
-				auto c = gen() % 127;
-				return (c < 32) ? 32 : c;
-			});
+			std::generate_n(buf, strLen, [&]() { return ' ' + (gen() % 95); });
 			buf[strLen] = '\0';
 
 			auto err = nvs_set_str(handle, thing.key, buf);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(err == ESP_ERR_NVS_REMOVE_FAILED) {
-				thing.update(buf, strLen);
-				return ESP_ERR_FLASH_OP_FAIL;
-			}
-			CHECK_EQ(err, ESP_OK);
-			thing.update(buf, strLen);
-			break;
+			return check(err, buf, strLen);
 		}
 
 		case ItemType::BLOB: {
@@ -258,22 +237,13 @@ public:
 			gen(buf, blobLen);
 
 			auto err = nvs_set_blob(handle, thing.key, buf, blobLen);
-			if(err == ESP_ERR_FLASH_OP_FAIL) {
-				return err;
-			}
-			if(err == ESP_ERR_NVS_REMOVE_FAILED) {
-				thing.update(buf, blobLen);
-				return ESP_ERR_FLASH_OP_FAIL;
-			}
-			CHECK_EQ(err, ESP_OK);
-			thing.update(buf, blobLen);
-			break;
+			return check(err, buf, blobLen);
 		}
 
 		default:
 			assert(false);
+			return ESP_FAIL;
 		}
-		return ESP_OK;
 	}
 
 	esp_err_t handleExternalWrite(const char* key, const void* value, size_t len)
