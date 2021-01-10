@@ -220,8 +220,8 @@ esp_err_t PageManager::fillStats(nvs_stats_t& nvsStats) const
 	esp_err_t err{ESP_OK};
 
 	// list of used pages
-	for(auto p = mPageList.begin(); p != mPageList.end(); ++p) {
-		err = p->calcEntries(nvsStats);
+	for(auto& page : mPageList) {
+		err = page.calcEntries(nvsStats);
 		if(err != ESP_OK) {
 			break;
 		}

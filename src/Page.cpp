@@ -800,7 +800,7 @@ esp_err_t Page::alterPageState(PageState state)
 		mState = PageState::INVALID;
 		return rc;
 	}
-	mState = (PageState)state;
+	mState = state;
 	return ESP_OK;
 }
 
@@ -981,17 +981,18 @@ size_t Page::getVarDataTailroom() const
 
 void Page::debugDump() const
 {
-	m_printf(_F("state=%x (%s) addr=%x seq=%d\nfirstUsed=%d nextFree=%d used=%d erased=%d\r\n"), uint32_t(mState),
-			 toString(mState).c_str(), mBaseAddress, mSeqNumber, int(mFirstUsedEntry), int(mNextFreeEntry),
+	m_printf(_F("state=%x (%s) addr=%x seq=%d\r\n"), uint32_t(mState), toString(mState).c_str(), mBaseAddress,
+			 mSeqNumber);
+	m_printf(_F("firstUsed=%d nextFree=%d used=%d erased=%d\r\n"), int(mFirstUsedEntry), int(mNextFreeEntry),
 			 mUsedEntryCount, mErasedEntryCount);
 	size_t skip = 0;
 	for(size_t i = 0; i < ENTRY_COUNT; ++i) {
 		m_printf(_F("%3u: "), i);
 		EntryState state = mEntryTable.get(i);
 		if(state == EntryState::EMPTY) {
-			m_printf("E\r\n");
+			m_puts("E\r\n");
 		} else if(state == EntryState::ERASED) {
-			m_printf("X\r\n");
+			m_puts("X\r\n");
 		} else if(state == EntryState::WRITTEN) {
 			Item item;
 			readEntry(i, item);
@@ -1005,7 +1006,7 @@ void Page::debugDump() const
 					skip = 0;
 				}
 			} else {
-				m_printf("D\rn");
+				m_puts("D\r\n");
 				skip--;
 			}
 		}
