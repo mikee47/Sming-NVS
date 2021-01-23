@@ -172,7 +172,7 @@ bool Container::writeMultiPageBlob(uint8_t nsIndex, const String& key, const voi
 								   VerOffset chunkStart)
 {
 	/* Check how much maximum data can be accommodated**/
-	uint32_t max_pages = std::min(mPageManager.getPageCount() - 1, (Page::CHUNK_ANY - 1) / 2U);
+	uint32_t max_pages = std::min(uint32_t(mPageManager.getPageCount() - 1), uint32_t(Page::CHUNK_ANY - 1) / 2U);
 
 	if(dataSize > max_pages * Page::CHUNK_MAX_SIZE) {
 		nvs_errno = ESP_ERR_NVS_VALUE_TOO_LONG;

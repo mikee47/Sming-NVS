@@ -158,7 +158,7 @@ esp_err_t Page::writeEntryData(const uint8_t* data, size_t size)
 
 	const uint8_t* buf = data;
 
-#ifdef ESP_PLATFORM
+#ifdef ARCH_ESP32
 	// TODO: check whether still necessary with esp_partition* API
 	/* On the ESP32, data can come from DROM, which is not accessible by spi_flash_write
      * function. To work around this, we copy the data to heap if it came from DROM.
@@ -167,21 +167,21 @@ esp_err_t Page::writeEntryData(const uint8_t* data, size_t size)
      * TODO: figure out how to make this platform-specific check nicer (probably by introducing
      * a platform-specific flash layer).
      */
-	if((uint32_t)data < 0x3ff00000) {
-		buf = (uint8_t*)malloc(size);
-		if(!buf) {
+	uint8_t* new_buf{nullptr};
+	if(esp_ptr_in_drom(data)) {
+		new_buf = new uint8_t[size];
+		if(new_buf == nullptr) {
 			return ESP_ERR_NO_MEM;
 		}
-		memcpy((void*)buf, data, size);
+		memcpy(new_buf, data, size);
+		buf = new_buf;
 	}
 #endif //ESP_PLATFORM
 
 	auto rc = mPartition->write(getEntryAddress(mNextFreeEntry), buf, size);
 
-#ifdef ESP_PLATFORM
-	if(buf != data) {
-		free((void*)buf);
-	}
+#ifdef ARCH_ESP32
+	delete[] new_buf;
 #endif //ESP_PLATFORM
 	if(rc != ESP_OK) {
 		mState = PageState::INVALID;

@@ -21,7 +21,7 @@
 #include <esp_spi_flash.h>
 #include <Print.h>
 
-class FlashEmulator : public Storage::Device
+class FlashEmulator : public Storage::CustomDevice
 {
 public:
 	struct Stat {
@@ -71,7 +71,7 @@ public:
 
 	Type getType() const override
 	{
-		return Type::ram;
+		return Type::sysmem;
 	}
 
 	bool read(uint32_t address, void* buffer, size_t len) override;
@@ -129,12 +129,6 @@ public:
 	void printTo(Print& p, const char* msg);
 
 	void reset();
-
-	using Partitions = Storage::CustomDevice::Partitions;
-	Partitions& partitions()
-	{
-		return reinterpret_cast<Partitions&>(mPartitions);
-	}
 
 protected:
 	void resize(size_t sectorCount);

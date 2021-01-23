@@ -25,12 +25,16 @@ template <typename PartitionClass> class PartitionEmulatorTemplate : public Part
 public:
 	PartitionEmulatorTemplate(FlashEmulator& emu, uint32_t address, uint32_t size,
 							  const char* partition_name = NVS_DEFAULT_PART_NAME)
-		: PartitionClass(emu, info), info{partition_name, Storage::Partition::Type::data,
-										  uint8_t(Storage::Partition::SubType::Data::nvs), address, size}
+		: PartitionClass(emu, info), info{partition_name,
+										  Storage::Partition::Type::data,
+										  uint8_t(Storage::Partition::SubType::Data::nvs),
+										  address,
+										  size,
+										  0}
 	{
 		assert(partition_name);
 		assert(size);
-		emu.partitions().add(info);
+		emu.createPartition(info);
 	}
 
 	nvs::PartitionPtr ptr()
