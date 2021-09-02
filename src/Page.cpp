@@ -426,7 +426,7 @@ esp_err_t Page::eraseEntryAndSpan(size_t index)
 			return rc;
 		}
 		if(item.calculateCrc32() != item.crc32) {
-			mHashList.erase(index, false);
+			mHashList.erase(index);
 			rc = alterEntryState(index, EntryState::ERASED);
 			--mUsedEntryCount;
 			++mErasedEntryCount;
@@ -614,6 +614,16 @@ esp_err_t Page::loadEntryTable()
 			span = 1;
 			if(mEntryTable.get(i) == EntryState::ERASED) {
 				lastItemIndex = INVALID_ENTRY;
+				continue;
+			}
+
+			if(mEntryTable.get(i) == EntryState::ILLEGAL) {
+				lastItemIndex = INVALID_ENTRY;
+				auto err = eraseEntryAndSpan(i);
+				if(err != ESP_OK) {
+					mState = PageState::INVALID;
+					return err;
+				}
 				continue;
 			}
 
@@ -975,7 +985,7 @@ size_t Page::getVarDataTailroom() const
 	} else if(mState == PageState::FULL) {
 		return 0;
 	}
-	/* Skip one entry for header*/
+	/* Skip one entry for blob data item precessing the data */
 	return ((mNextFreeEntry < (ENTRY_COUNT - 1)) ? ((ENTRY_COUNT - mNextFreeEntry - 1) * ENTRY_SIZE) : 0);
 }
 

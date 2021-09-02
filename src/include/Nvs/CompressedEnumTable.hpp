@@ -33,7 +33,7 @@ public:
 
 	Tenum get(size_t index) const
 	{
-		assert(index >= 0 && index < Nitems);
+		assert(index < Nitems);
 		size_t wordIndex = index / ITEMS_PER_WORD;
 		size_t offset = (index % ITEMS_PER_WORD) * Nbits;
 
@@ -42,7 +42,7 @@ public:
 
 	void set(size_t index, Tenum val)
 	{
-		assert(index >= 0 && index < Nitems);
+		assert(index < Nitems);
 		size_t wordIndex = index / ITEMS_PER_WORD;
 		size_t offset = (index % ITEMS_PER_WORD) * Nbits;
 

@@ -314,7 +314,7 @@ public:
 			debug_i("Added %u items, %u blocks", count, hashlist.getBlockCount());
 			// Remove them in reverse order
 			for(size_t i = count; i > 0; --i) {
-				hashlist.erase(i - 1, true);
+				CHECK(hashlist.erase(i - 1) == true);
 			}
 			CHECK(hashlist.getBlockCount() == 0);
 			// Add again
@@ -327,7 +327,7 @@ public:
 			debug_i("Added %u items, %u blocks", count, hashlist.getBlockCount());
 			// Remove them in the same order
 			for(size_t i = 0; i < count; ++i) {
-				hashlist.erase(i, true);
+				CHECK(hashlist.erase(i) == true);
 			}
 			CHECK(hashlist.getBlockCount() == 0);
 		}
